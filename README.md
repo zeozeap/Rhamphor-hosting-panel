@@ -58,7 +58,7 @@ Rhamphor is a production-ready game server hosting panel with real-time console 
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourorg/rhamphor.git
+git clone https://github.com/zeozeap/rhamphor.git
 cd rhamphor
 
 # Install dependencies
