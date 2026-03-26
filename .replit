@@ -17,6 +17,27 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/flaps-daemon: Flaps Daemon"
+
+[[workflows.workflow]]
+name = "artifacts/flaps-daemon: Flaps Daemon"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "FLAPS_PORT=9000 FLAPS_DATA_DIR=/tmp/flaps-data FLAPS_TOKEN=dev-token-rhamphor pnpm --filter @workspace/flaps-daemon run dev"
+waitForPort = 9000
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

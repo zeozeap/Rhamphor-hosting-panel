@@ -167,3 +167,31 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 ## Custom Fetch Notes
 
 `lib/api-client-react/src/custom-fetch.ts` is configured with `credentials: "include"` so session cookies are always sent. This is required for the session-based auth to work in the browser.
+
+## Flaps Daemon
+
+The **Flaps** daemon (`artifacts/flaps-daemon/`) is the node agent that runs on game server nodes. It communicates with the Rhamphor panel via HTTP REST + WebSocket.
+
+### Architecture
+```
+Rhamphor Panel API  ←→  Flaps Daemon (per node)  ←→  Game Server Processes
+```
+
+### Flaps API (port 9000 in dev, 8443 in prod)
+- `GET /` - Daemon info (no auth)
+- `GET /api/health` - Health + system stats (no auth)
+- `GET /api/stats` - Full CPU/RAM/disk/network stats + server list (auth required)
+- `POST /api/servers` - Register server slot (auth required)
+- `POST /api/servers/:id/power` - start/stop/restart/kill (auth required)
+- `POST /api/servers/:id/command` - Send console command (auth required)
+- `GET /api/servers/:id/console` - Console history (auth required)
+- `GET/PUT/DELETE /api/servers/:id/files*` - File manager (auth required)
+- `WS /ws?type=console&server=:id&token=:token` - Real-time console stream
+- `WS /ws?type=stats&token=:token` - Real-time system stats stream
+
+### Dev Token
+Token in dev: `dev-token-rhamphor`
+
+### Installation Scripts
+- `scripts/install-flaps.sh` — One-command Flaps daemon installation (installs Node.js, systemd service, firewall rules)
+- `scripts/install-rhamphor.sh` — One-command Rhamphor panel installation (installs Node.js, PostgreSQL, Nginx, SSL)
