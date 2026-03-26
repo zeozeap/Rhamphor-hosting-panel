@@ -3,7 +3,7 @@ import { useCreateServer, useListNodes, useListUsers, ServerServerType } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Server } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
