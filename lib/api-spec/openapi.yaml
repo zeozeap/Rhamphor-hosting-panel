@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Minecraft Hosting Panel API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: servers
+    description: Minecraft server management
+  - name: users
+    description: User management
+  - name: nodes
+    description: Node/daemon management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,309 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /servers:
+    get:
+      operationId: listServers
+      tags: [servers]
+      summary: List all servers
+      responses:
+        "200":
+          description: List of servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Server"
+    post:
+      operationId: createServer
+      tags: [servers]
+      summary: Create a new server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServerRequest"
+      responses:
+        "201":
+          description: Server created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+
+  /servers/{id}:
+    get:
+      operationId: getServer
+      tags: [servers]
+      summary: Get a server by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Server details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteServer
+      tags: [servers]
+      summary: Delete a server
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Server deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/power:
+    post:
+      operationId: serverPowerAction
+      tags: [servers]
+      summary: Start, stop, or restart a server
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PowerActionRequest"
+      responses:
+        "200":
+          description: Action performed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/command:
+    post:
+      operationId: sendServerCommand
+      tags: [servers]
+      summary: Send a command to the server console
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommandRequest"
+      responses:
+        "200":
+          description: Command sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/stats:
+    get:
+      operationId: getServerStats
+      tags: [servers]
+      summary: Get server resource stats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Server stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerStats"
+
+  /servers/{id}/logs:
+    get:
+      operationId: getServerLogs
+      tags: [servers]
+      summary: Get recent console logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lines
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Console logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogsResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /nodes:
+    get:
+      operationId: listNodes
+      tags: [nodes]
+      summary: List all nodes
+      responses:
+        "200":
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Node"
+    post:
+      operationId: createNode
+      tags: [nodes]
+      summary: Create a new node
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNodeRequest"
+      responses:
+        "201":
+          description: Node created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+
+  /nodes/{id}:
+    get:
+      operationId: getNode
+      tags: [nodes]
+      summary: Get a node by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Node details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+    delete:
+      operationId: deleteNode
+      tags: [nodes]
+      summary: Delete a node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Node deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +341,268 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    Server:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [starting, running, stopping, stopped, crashed]
+        version:
+          type: string
+        port:
+          type: number
+        memory:
+          type: number
+        disk:
+          type: number
+        nodeId:
+          type: string
+        userId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        playerCount:
+          type: number
+        maxPlayers:
+          type: number
+        javaVersion:
+          type: string
+        serverType:
+          type: string
+          enum: [vanilla, paper, spigot, forge, fabric, bungeecord]
+      required:
+        - id
+        - name
+        - status
+        - version
+        - port
+        - memory
+        - disk
+        - nodeId
+        - userId
+        - createdAt
+        - updatedAt
+        - serverType
+
+    CreateServerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        port:
+          type: number
+        memory:
+          type: number
+        disk:
+          type: number
+        nodeId:
+          type: string
+        userId:
+          type: string
+        maxPlayers:
+          type: number
+        javaVersion:
+          type: string
+        serverType:
+          type: string
+          enum: [vanilla, paper, spigot, forge, fabric, bungeecord]
+      required:
+        - name
+        - version
+        - port
+        - memory
+        - disk
+        - nodeId
+        - userId
+        - serverType
+
+    PowerActionRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [start, stop, restart, kill]
+      required:
+        - action
+
+    CommandRequest:
+      type: object
+      properties:
+        command:
+          type: string
+      required:
+        - command
+
+    ServerStats:
+      type: object
+      properties:
+        serverId:
+          type: string
+        cpuPercent:
+          type: number
+        memoryUsed:
+          type: number
+        memoryLimit:
+          type: number
+        diskUsed:
+          type: number
+        diskLimit:
+          type: number
+        networkRx:
+          type: number
+        networkTx:
+          type: number
+        uptime:
+          type: number
+        playerCount:
+          type: number
+      required:
+        - serverId
+        - cpuPercent
+        - memoryUsed
+        - memoryLimit
+        - diskUsed
+        - diskLimit
+        - networkRx
+        - networkTx
+        - uptime
+        - playerCount
+
+    LogsResponse:
+      type: object
+      properties:
+        serverId:
+          type: string
+        logs:
+          type: array
+          items:
+            type: string
+      required:
+        - serverId
+        - logs
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+        - role
+        - createdAt
+
+    CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+      required:
+        - username
+        - email
+        - password
+
+    Node:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fqdn:
+          type: string
+        port:
+          type: number
+        memory:
+          type: number
+        disk:
+          type: number
+        status:
+          type: string
+          enum: [online, offline, maintenance]
+        location:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        serversCount:
+          type: number
+      required:
+        - id
+        - name
+        - fqdn
+        - port
+        - memory
+        - disk
+        - status
+        - createdAt
+
+    CreateNodeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        fqdn:
+          type: string
+        port:
+          type: number
+        memory:
+          type: number
+        disk:
+          type: number
+        location:
+          type: string
+      required:
+        - name
+        - fqdn
+        - port
+        - memory
+        - disk

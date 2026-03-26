@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "Smooth page transitions and staggered list animations"
+  "recharts": "For rendering CPU, RAM, and Disk usage gauges and charts"
+  "date-fns": "For formatting uptime and creation dates nicely"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For validating forms with Zod before submission"
+  "zod": "Schema validation for forms"
+  "lucide-react": "Beautiful consistent icons"
+  "clsx": "Utility for constructing className conditionally"
+  "tailwind-merge": "Utility for merging tailwind classes without conflicts"
+
+images: []
+
+notes:
+  - "The app uses @workspace/api-client-react for data fetching."
+  - "WebSockets are expected at the relative path /ws/servers/{id}/console"
+  - "Polling is implemented using TanStack query's refetchInterval for server stats."
