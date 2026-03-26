@@ -51,6 +51,42 @@ artifacts-monorepo/
 └── package.json
 ```
 
+## New Features (Latest)
+
+### Personalization System
+- **Panel Settings API**: `GET/PUT /api/settings`, `GET /api/settings/public`
+- **PanelSettingsContext**: Loads public settings on app init, applies CSS vars + favicon + page title dynamically
+- **Theme colors**: 8 presets (cyan, purple, emerald, rose, orange, blue, yellow, pink) + custom hex color picker
+- **Logo/Favicon**: Configurable URLs for sidebar logo and browser favicon
+- **Custom CSS**: Inject arbitrary CSS into all panel pages
+
+### Login Page Customization
+- Custom title, subtitle, logo URL, background image URL
+- Password visibility toggle (eye icon)
+- Dynamic primary color applied to button + glow effects
+- Glass/blur card design with animated gradient background
+
+### reCAPTCHA (Optional)
+- Toggle on/off per panel settings (Security tab in Settings)
+- Google reCAPTCHA v2 with dark theme
+- Site key (public) + Secret key (private) stored in DB
+- Only renders when both `recaptchaEnabled=true` and `recaptchaSiteKey` set
+
+### Nests & Eggs (like Pterodactyl)
+- **Nests**: Categories for server types (DB: `nests` table)
+- **Eggs**: Server type definitions with docker image + startup command (DB: `eggs` table)
+- Import presets: Minecraft Java (Paper, Forge, Vanilla, Fabric), Discord Bots (Discord.js, Python, JDA), Generic (Node.js, Python, Go)
+- Full CRUD: create/edit/delete nests and eggs
+- Collapsible nest accordion with inline egg creation
+
+### Real-Time Activity Log & Audit System
+- **DB**: `audit_logs` table (action, userId, username, resourceType, resourceId, resourceName, metadata, ip, level)
+- **auditLogger.ts**: `logAudit()`, `auditFromReq()`, `onActivity()` event emitter
+- **WebSocket**: `/ws/activity` broadcasts events to all connected admin clients in real-time
+- **Audit API**: `GET /api/audit` (admin, paginated, filterable)
+- **Activity Log page**: Live feed with pause/resume, filter by action/user/resource, color-coded badges
+- Audit events logged: user.login, server.start/stop/restart/kill/create/update/delete, nest.create/delete, egg.create/delete
+
 ## Key Features
 
 ### Frontend (`artifacts/panel`)

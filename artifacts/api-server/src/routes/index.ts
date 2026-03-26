@@ -7,6 +7,9 @@ import nodesRouter from "./nodes.js";
 import filesRouter from "./files.js";
 import pluginsRouter from "./plugins.js";
 import subdomainsRouter from "./subdomains.js";
+import settingsRouter from "./settings.js";
+import nestsRouter from "./nests.js";
+import auditRouter from "./audit.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +21,8 @@ router.use(nodesRouter);
 router.use(filesRouter);
 router.use(pluginsRouter);
 router.use(subdomainsRouter);
+router.use(settingsRouter);
+router.use(nestsRouter);
+router.use(auditRouter);
 
 export default router;

@@ -4,6 +4,7 @@ import { usersTable } from "@workspace/db/schema";
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { LoginBody, UpdateProfileBody } from "@workspace/api-zod";
+import { logAudit } from "../lib/auditLogger.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -41,6 +42,17 @@ router.post("/auth/login", async (req, res) => {
   }
 
   req.session.userId = user.id;
+
+  logAudit({
+    userId: user.id,
+    username: user.username,
+    action: "user.login",
+    resourceType: "user",
+    resourceId: user.id,
+    resourceName: user.username,
+    ip: req.ip ?? undefined,
+    level: "info",
+  });
 
   res.json({
     id: user.id,

@@ -14,6 +14,8 @@ import { Nodes } from "./pages/Nodes";
 import { Users } from "./pages/Users";
 import { Settings } from "./pages/Settings";
 import { MyServers } from "./pages/MyServers";
+import { Nests } from "./pages/Nests";
+import { ActivityLog } from "./pages/ActivityLog";
 import NotFound from "./pages/not-found";
 
 const queryClient = new QueryClient({
@@ -78,6 +80,12 @@ function Router() {
       </Route>
       <Route path="/my-servers">
         <ProtectedRoute component={MyServers} />
+      </Route>
+      <Route path="/nests">
+        <ProtectedRoute component={Nests} />
+      </Route>
+      <Route path="/activity">
+        <ProtectedRoute component={ActivityLog} />
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={Settings} />

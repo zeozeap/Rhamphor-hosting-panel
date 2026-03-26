@@ -1,94 +1,158 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from 'wouter';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Server } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-const loginSchema = z.object({
-  username: z.string().min(1, 'Username or Email is required'),
-  password: z.string().min(1, 'Password is required')
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+import { useState, useRef } from "react";
+import { useLocation } from "wouter";
+import { Server, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePanelSettings } from "@/contexts/PanelSettingsContext";
+import ReCAPTCHA from "react-google-recaptcha";
 
 export function Login() {
-  const { login } = useAuth();
   const [, setLocation] = useLocation();
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
+  const { settings } = usePanelSettings();
+  const [loginValue, setLoginValue] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema)
-  });
+  const recaptchaEnabled = settings.recaptchaEnabled === "true" && !!settings.recaptchaSiteKey;
+  const primaryColor = settings.primaryColor || "#00BCD4";
+  const logoUrl = settings.loginLogoUrl || settings.logoUrl;
 
-  const onSubmit = async (data: LoginForm) => {
-    setIsSubmitting(true);
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (recaptchaEnabled && !captchaToken) {
+      setError("Please complete the reCAPTCHA verification");
+      return;
+    }
+    setError("");
+    setLoading(true);
     try {
-      await login(data.username, data.password);
-      setLocation('/');
+      await login(loginValue, password);
+      setLocation("/");
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      setError(err?.message || "Invalid credentials");
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-card border border-border rounded-2xl shadow-[0_0_30px_rgba(0,214,214,0.15)] p-8"
-      >
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 neon-glow mb-4">
-            <Server className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Vortex<span className="text-primary">Panel</span></h1>
-          <p className="text-muted-foreground mt-2">Minecraft Hosting Platform</p>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={
+        settings.loginBg
+          ? { backgroundImage: `url(${settings.loginBg})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: `radial-gradient(ellipse at 50% 0%, ${primaryColor}12 0%, transparent 60%), hsl(var(--background))` }
+      }
+    >
+      {settings.loginBg && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.04]" style={{ background: `radial-gradient(circle, ${primaryColor}, transparent 70%)` }} />
+        <div className="absolute -bottom-1/2 -right-1/4 w-[600px] h-[600px] rounded-full opacity-[0.04]" style={{ background: `radial-gradient(circle, ${primaryColor}, transparent 70%)` }} />
+      </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Username or Email</label>
-            <input 
-              {...register('username')}
-              className="w-full bg-input border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-foreground"
-              placeholder="admin"
-            />
-            {errors.username && <p className="text-destructive text-sm">{errors.username.message}</p>}
+      <div className="w-full max-w-md relative z-10">
+        <div
+          className="bg-card/90 backdrop-blur-xl border border-border rounded-2xl overflow-hidden"
+          style={{ boxShadow: `0 0 60px ${primaryColor}15, 0 25px 50px rgba(0,0,0,0.5)` }}
+        >
+          <div className="px-8 pt-8 pb-0 text-center">
+            {logoUrl ? (
+              <img src={logoUrl} alt={settings.panelName} className="w-20 h-20 mx-auto mb-4 rounded-2xl object-contain" />
+            ) : (
+              <div
+                className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center border"
+                style={{ background: `${primaryColor}20`, borderColor: `${primaryColor}40`, boxShadow: `0 0 30px ${primaryColor}30` }}
+              >
+                <Server className="w-10 h-10" style={{ color: primaryColor }} />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold mt-3">
+              {settings.loginTitle || settings.panelName || "Welcome Back"}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {settings.loginSubtitle || settings.panelTagline || "Sign in to your hosting account"}
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Password</label>
-            <input 
-              type="password"
-              {...register('password')}
-              className="w-full bg-input border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-foreground"
-              placeholder="••••••••"
-            />
-            {errors.password && <p className="text-destructive text-sm">{errors.password.message}</p>}
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-              {error}
+          <form onSubmit={handleSubmit} className="p-8 space-y-5">
+            {error && (
+              <div className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Username or Email</label>
+              <input
+                type="text"
+                value={loginValue}
+                onChange={e => setLoginValue(e.target.value)}
+                placeholder="admin"
+                required
+                autoFocus
+                autoComplete="username"
+                className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="w-full bg-input border border-border rounded-xl px-4 py-3 pr-12 text-foreground focus:outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {recaptchaEnabled && settings.recaptchaSiteKey && (
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={settings.recaptchaSiteKey}
+                  theme="dark"
+                  onChange={token => setCaptchaToken(token)}
+                />
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading || (recaptchaEnabled && !captchaToken)}
+              className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-black"
+              style={{ background: primaryColor, boxShadow: `0 0 20px ${primaryColor}40` }}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black/80 rounded-full animate-spin" />
+                  Signing in...
+                </div>
+              ) : "Sign In"}
+            </button>
+          </form>
 
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="w-full py-3 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-          >
-            {isSubmitting ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-      </motion.div>
+          <div className="px-8 pb-6 text-center">
+            <p className="text-xs text-muted-foreground/50">{settings.panelName} · v1.0.0</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+export default Login;
