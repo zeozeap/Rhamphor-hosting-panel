@@ -28,6 +28,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 - 2 Nodes: US-East, EU-West
 - 3 Servers: Survival SMP (paper 1.21.1), Creative World (paper 1.20.4), Modded 1.12 (forge 1.12.2)
+- Plugins seeded: Survival SMP (EssentialsX, WorldGuard, LuckPerms), Creative World (EssentialsX, WorldEdit, PlaceholderAPI)
+- Subdomain seeded: survival-smp.vortexpanel.io:25565
 
 ## Structure
 
@@ -53,24 +55,64 @@ artifacts-monorepo/
 
 ### Frontend (`artifacts/panel`)
 - **Theme**: Cyan dark (#00BCD4 primary, #0D1117 background)
-- **Pages**: Login, Dashboard, Servers, Server Detail (console/stats), Nodes, Users, Settings
+- **Pages**: Login, Dashboard, Servers, Server Detail (6 tabs), Nodes, Users, My Servers, Settings
 - **Auth**: `AuthContext` + `ProtectedRoute` using `useAuth` hook; session cookie via `credentials: 'include'`
 - **Routing**: Wouter v3 with `<Route path="..."><Component /></Route>` pattern (NOT render props)
 - **Redirect pattern**: `useEffect(() => { if (!user) setLocation('/login') }, [user])` — NEVER call setLocation during render
 
+#### Sidebar Structure
+- **My Account** section: "My Servers" → `/my-servers`
+- **Administration** section (admin only): Dashboard, All Servers, Nodes, Users
+- Settings link + user avatar + logout button at bottom
+
+#### Server Detail Tabs (6 tabs)
+1. **Console** — WebSocket terminal at `ws://.../ws/servers/:id/console`; live streaming + command input
+2. **Files** — Dual-pane file manager: left tree + right code editor; Ctrl+S to save; in-memory FS
+3. **Plugins** — List installed plugins with toggle/delete; install form with name input
+4. **Subdomains** — Manage `{sub}.vortexpanel.io:{port}` addresses; add/copy/delete
+5. **Stats** — RAM/CPU/disk usage cards with animated stat display
+6. **Settings** — Edit server name, description, memory, disk, max players, port; danger zone (delete)
+
+#### My Servers Page (`/my-servers`)
+- Shows only the logged-in user's servers (filtered by userId)
+- Power controls (Start/Stop), stats display, link to server detail
+
 ### Backend (`artifacts/api-server`)
 - **Auth**: `express-session` + `bcryptjs`; routes at `/api/auth/login|logout|me|profile`
-- **Routes**: servers, users, nodes, server-logs at `/api/servers|users|nodes|server-logs`
-- **WebSocket**: Console streaming at `ws://host/ws/servers/:id/console`
-- **Server Manager**: `src/lib/serverManager.ts` — in-memory map of server processes with simulated stats/logs
+- **Routes**: servers, users, nodes, server-logs, files, plugins, subdomains at `/api/servers|users|nodes|server-logs`
+- **File routes**: `GET /api/servers/:id/files`, `GET /api/servers/:id/files/read`, `PUT /api/servers/:id/files/write`, `DELETE /api/servers/:id/files`
+- **Plugin routes**: `GET|POST /api/servers/:id/plugins`, `PATCH /api/servers/:id/plugins/:pluginId`, `DELETE /api/servers/:id/plugins/:pluginId`
+- **Subdomain routes**: `GET|POST /api/servers/:id/subdomains`, `DELETE /api/servers/:id/subdomains/:subId`
+- **WebSocket**: Console streaming at `ws://host/ws/servers/:id/console`; uses `addClient`/`removeClient`
+- **PATCH route**: `PATCH /api/servers/:id/update` — update server settings
+- **Server Manager**: `src/lib/serverManager.ts` — in-memory map of server processes + in-memory file system
+
+#### In-Memory File System (serverManager.ts)
+- `initFileSystem(serverId, serverType)` — creates default Minecraft files per type (paper/forge/vanilla)
+- `listFiles(serverId, dirPath)` — returns FileEntry[]
+- `readFile(serverId, filePath)` — returns FileEntry with content
+- `writeFile(serverId, filePath, content)` — upserts file
+- `deleteFilePath(serverId, filePath)` — deletes file or dir
+- Pre-seeded files: `server.properties`, `eula.txt`, `paper.yml`, `spigot.yml`, `server.log`, directories: `plugins/`, `world/`, `world_nether/`, `world_the_end/`, `crash-reports/`
 
 ### Database (`lib/db`)
-- Schema: `users`, `nodes`, `servers`, `server_logs`
+- Schema: `users`, `nodes`, `servers`, `server_logs`, `server_plugins`, `subdomains`
 - Push migrations: `pnpm --filter @workspace/db run push`
 
 ### API Codegen
 - Run: `pnpm --filter @workspace/api-spec run codegen`
 - Output: `lib/api-client-react/src/generated/` and `lib/api-zod/src/generated/`
+
+## Generated Hook Variable Shapes (Mutations)
+
+- `useUpdateServer`: `{ id, data: UpdateServerRequest }`
+- `useWriteServerFile`: `{ id, data: FileWriteRequest, params: WriteServerFileParams }`
+- `useDeleteServerFile`: `{ id, params: DeleteServerFileParams }`
+- `useInstallServerPlugin`: `{ id, data: InstallPluginRequest }`
+- `useToggleServerPlugin`: `{ id, pluginId, data: ToggleServerPluginBody }`
+- `useRemoveServerPlugin`: `{ id, pluginId }`
+- `useCreateServerSubdomain`: `{ id, data: CreateSubdomainRequest }`
+- `useDeleteServerSubdomain`: `{ id, subId }`
 
 ## TypeScript & Composite Projects
 

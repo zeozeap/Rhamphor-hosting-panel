@@ -28,7 +28,7 @@ wss.on("connection", (ws, req) => {
     return;
   }
   const serverId = match[1];
-  serverManager.registerConsoleClient(serverId, ws);
+  serverManager.addClient(serverId, ws);
 
   const logs = serverManager.getLogs(serverId, 100);
   for (const line of logs) {
@@ -43,6 +43,10 @@ wss.on("connection", (ws, req) => {
       }
     } catch (_e) {
     }
+  });
+
+  ws.on("close", () => {
+    serverManager.removeClient(serverId, ws);
   });
 });
 

@@ -336,3 +336,253 @@ export const DeleteNodeParams = zod.object({
 export const DeleteNodeResponse = zod.object({
   message: zod.string(),
 });
+
+/**
+ * @summary Update server settings
+ */
+export const UpdateServerParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateServerBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  memory: zod.number().optional(),
+  disk: zod.number().optional(),
+  maxPlayers: zod.number().optional(),
+  port: zod.number().optional(),
+});
+
+export const UpdateServerResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  status: zod.enum(["starting", "running", "stopping", "stopped", "crashed"]),
+  version: zod.string(),
+  port: zod.number(),
+  memory: zod.number(),
+  disk: zod.number(),
+  nodeId: zod.string(),
+  userId: zod.string(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+  playerCount: zod.number().optional(),
+  maxPlayers: zod.number().optional(),
+  javaVersion: zod.string().optional(),
+  serverType: zod.enum([
+    "vanilla",
+    "paper",
+    "spigot",
+    "forge",
+    "fabric",
+    "bungeecord",
+  ]),
+});
+
+/**
+ * @summary List files in a directory
+ */
+export const ListServerFilesParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListServerFilesQueryParams = zod.object({
+  path: zod.coerce.string().optional(),
+});
+
+export const ListServerFilesResponse = zod.object({
+  path: zod.string(),
+  entries: zod.array(
+    zod.object({
+      name: zod.string(),
+      path: zod.string(),
+      isDir: zod.boolean(),
+      size: zod.number(),
+      updatedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a file
+ */
+export const DeleteServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteServerFileQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
+
+export const DeleteServerFileResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Read file contents
+ */
+export const ReadServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ReadServerFileQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
+
+export const ReadServerFileResponse = zod.object({
+  path: zod.string(),
+  content: zod.string(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Write file contents
+ */
+export const WriteServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const WriteServerFileQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
+
+export const WriteServerFileBody = zod.object({
+  content: zod.string(),
+});
+
+export const WriteServerFileResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Create a directory
+ */
+export const CreateServerDirectoryParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CreateServerDirectoryBody = zod.object({
+  path: zod.string(),
+});
+
+export const CreateServerDirectoryResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary List installed plugins
+ */
+export const ListServerPluginsParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListServerPluginsResponseItem = zod.object({
+  id: zod.string(),
+  serverId: zod.string(),
+  name: zod.string(),
+  version: zod.string(),
+  description: zod.string().optional(),
+  author: zod.string().optional(),
+  filename: zod.string(),
+  fileSize: zod.number(),
+  enabled: zod.boolean(),
+  createdAt: zod.date(),
+});
+export const ListServerPluginsResponse = zod.array(
+  ListServerPluginsResponseItem,
+);
+
+/**
+ * @summary Install a plugin
+ */
+export const InstallServerPluginParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const InstallServerPluginBody = zod.object({
+  name: zod.string(),
+  version: zod.string().optional(),
+});
+
+/**
+ * @summary Enable or disable a plugin
+ */
+export const ToggleServerPluginParams = zod.object({
+  id: zod.coerce.string(),
+  pluginId: zod.coerce.string(),
+});
+
+export const ToggleServerPluginBody = zod.object({
+  enabled: zod.boolean(),
+});
+
+export const ToggleServerPluginResponse = zod.object({
+  id: zod.string(),
+  serverId: zod.string(),
+  name: zod.string(),
+  version: zod.string(),
+  description: zod.string().optional(),
+  author: zod.string().optional(),
+  filename: zod.string(),
+  fileSize: zod.number(),
+  enabled: zod.boolean(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Remove a plugin
+ */
+export const RemoveServerPluginParams = zod.object({
+  id: zod.coerce.string(),
+  pluginId: zod.coerce.string(),
+});
+
+export const RemoveServerPluginResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List subdomains for a server
+ */
+export const ListServerSubdomainsParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListServerSubdomainsResponseItem = zod.object({
+  id: zod.string(),
+  serverId: zod.string(),
+  subdomain: zod.string(),
+  targetPort: zod.string(),
+  createdAt: zod.date(),
+});
+export const ListServerSubdomainsResponse = zod.array(
+  ListServerSubdomainsResponseItem,
+);
+
+/**
+ * @summary Create a subdomain
+ */
+export const CreateServerSubdomainParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CreateServerSubdomainBody = zod.object({
+  subdomain: zod.string(),
+});
+
+/**
+ * @summary Delete a subdomain
+ */
+export const DeleteServerSubdomainParams = zod.object({
+  id: zod.coerce.string(),
+  subId: zod.coerce.string(),
+});
+
+export const DeleteServerSubdomainResponse = zod.object({
+  message: zod.string(),
+});

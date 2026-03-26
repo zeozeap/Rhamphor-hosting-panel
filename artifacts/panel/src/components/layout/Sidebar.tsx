@@ -1,18 +1,41 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Server, Users, HardDrive, LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { Server, Users, HardDrive, LayoutDashboard, Settings, LogOut, UserCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === "admin";
 
-  const links = [
+  const adminLinks = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/servers", label: "Servers", icon: Server },
+    { href: "/servers", label: "All Servers", icon: Server },
     { href: "/nodes", label: "Nodes", icon: HardDrive },
     { href: "/users", label: "Users", icon: Users },
   ];
+
+  const userLinks = [
+    { href: "/my-servers", label: "My Servers", icon: Server },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === "/") return location === "/";
+    return location.startsWith(href);
+  };
+
+  const NavLink = ({ href, label, Icon }: { href: string; label: string; Icon: any }) => (
+    <Link key={href} href={href} className={cn(
+      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+      isActive(href)
+        ? "bg-primary/10 text-primary"
+        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+    )}>
+      {isActive(href) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md" />}
+      <Icon className={cn("w-5 h-5", isActive(href) ? "text-primary drop-shadow-[0_0_8px_rgba(0,214,214,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
+      {label}
+    </Link>
+  );
 
   return (
     <aside className="w-64 flex-shrink-0 border-r border-border bg-sidebar h-screen sticky top-0 flex flex-col hidden md:flex">
@@ -24,45 +47,26 @@ export function Sidebar() {
           <span className="font-bold text-lg tracking-tight">Vortex<span className="text-primary">Panel</span></span>
         </div>
       </div>
-      
-      <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">
-          Management
-        </div>
-        
-        {links.map((link) => {
-          const Icon = link.icon;
-          const isActive = location === link.href || (link.href !== "/" && location.startsWith(link.href));
-          
-          return (
-            <Link key={link.href} href={link.href} className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative overflow-hidden",
-              isActive 
-                ? "bg-primary/10 text-primary" 
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            )}>
-              {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md" />
-              )}
-              <Icon className={cn("w-5 h-5", isActive ? "text-primary drop-shadow-[0_0_8px_rgba(0,214,214,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
-              {link.label}
-            </Link>
-          );
-        })}
 
-        <div className="mt-8 pt-4 border-t border-border/50">
-          <Link href="/settings" className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative overflow-hidden",
-            location.startsWith('/settings') 
-              ? "bg-primary/10 text-primary" 
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-          )}>
-            {location.startsWith('/settings') && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md" />
-            )}
-            <Settings className={cn("w-5 h-5", location.startsWith('/settings') ? "text-primary drop-shadow-[0_0_8px_rgba(0,214,214,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
-            Settings
-          </Link>
+      <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">My Account</div>
+        {userLinks.map(({ href, label, icon: Icon }) => (
+          <NavLink key={href} href={href} label={label} Icon={Icon} />
+        ))}
+
+        {isAdmin && (
+          <>
+            <div className="mt-6 mb-3 pt-4 border-t border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+              Administration
+            </div>
+            {adminLinks.map(({ href, label, icon: Icon }) => (
+              <NavLink key={href} href={href} label={label} Icon={Icon} />
+            ))}
+          </>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-border/50">
+          <NavLink href="/settings" label="Settings" Icon={Settings} />
         </div>
       </div>
 
@@ -77,8 +81,8 @@ export function Sidebar() {
               <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
             </div>
           </div>
-          <button 
-            onClick={() => logout()} 
+          <button
+            onClick={() => logout()}
             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
             title="Log out"
           >

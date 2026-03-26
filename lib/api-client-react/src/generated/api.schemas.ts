@@ -206,6 +206,93 @@ export interface CreateNodeRequest {
   location?: string;
 }
 
+export interface UpdateServerRequest {
+  name?: string;
+  description?: string;
+  memory?: number;
+  disk?: number;
+  maxPlayers?: number;
+  port?: number;
+}
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  size: number;
+  updatedAt: string;
+}
+
+export interface FileListResponse {
+  path: string;
+  entries: FileEntry[];
+}
+
+export interface FileReadResponse {
+  path: string;
+  content: string;
+  size: number;
+  updatedAt: string;
+}
+
+export interface FileWriteRequest {
+  content: string;
+}
+
+export interface ServerPlugin {
+  id: string;
+  serverId: string;
+  name: string;
+  version: string;
+  description?: string;
+  author?: string;
+  filename: string;
+  fileSize: number;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface InstallPluginRequest {
+  name: string;
+  version?: string;
+}
+
+export interface Subdomain {
+  id: string;
+  serverId: string;
+  subdomain: string;
+  targetPort: string;
+  createdAt: string;
+}
+
+export interface CreateSubdomainRequest {
+  subdomain: string;
+}
+
 export type GetServerLogsParams = {
   lines?: number;
+};
+
+export type ListServerFilesParams = {
+  path?: string;
+};
+
+export type DeleteServerFileParams = {
+  path: string;
+};
+
+export type ReadServerFileParams = {
+  path: string;
+};
+
+export type WriteServerFileParams = {
+  path: string;
+};
+
+export type CreateServerDirectoryBody = {
+  path: string;
+};
+
+export type ToggleServerPluginBody = {
+  enabled: boolean;
 };

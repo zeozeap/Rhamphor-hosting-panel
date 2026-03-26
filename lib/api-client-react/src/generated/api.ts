@@ -20,20 +20,35 @@ import type {
   AuthUser,
   CommandRequest,
   CreateNodeRequest,
+  CreateServerDirectoryBody,
   CreateServerRequest,
+  CreateSubdomainRequest,
   CreateUserRequest,
+  DeleteServerFileParams,
   ErrorResponse,
+  FileEntry,
+  FileListResponse,
+  FileReadResponse,
+  FileWriteRequest,
   GetServerLogsParams,
   HealthStatus,
+  InstallPluginRequest,
+  ListServerFilesParams,
   LoginRequest,
   LogsResponse,
   MessageResponse,
   Node,
   PowerActionRequest,
+  ReadServerFileParams,
   Server,
+  ServerPlugin,
   ServerStats,
+  Subdomain,
+  ToggleServerPluginBody,
   UpdateProfileRequest,
+  UpdateServerRequest,
   User,
+  WriteServerFileParams,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1756,4 +1771,1231 @@ export const useDeleteNode = <
   TContext
 > => {
   return useMutation(getDeleteNodeMutationOptions(options));
+};
+
+/**
+ * @summary Update server settings
+ */
+export const getUpdateServerUrl = (id: string) => {
+  return `/api/servers/${id}/update`;
+};
+
+export const updateServer = async (
+  id: string,
+  updateServerRequest: UpdateServerRequest,
+  options?: RequestInit,
+): Promise<Server> => {
+  return customFetch<Server>(getUpdateServerUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateServerRequest),
+  });
+};
+
+export const getUpdateServerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateServer>>,
+    TError,
+    { id: string; data: BodyType<UpdateServerRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateServer>>,
+  TError,
+  { id: string; data: BodyType<UpdateServerRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateServer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateServer>>,
+    { id: string; data: BodyType<UpdateServerRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateServer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateServerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateServer>>
+>;
+export type UpdateServerMutationBody = BodyType<UpdateServerRequest>;
+export type UpdateServerMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update server settings
+ */
+export const useUpdateServer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateServer>>,
+    TError,
+    { id: string; data: BodyType<UpdateServerRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateServer>>,
+  TError,
+  { id: string; data: BodyType<UpdateServerRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateServerMutationOptions(options));
+};
+
+/**
+ * @summary List files in a directory
+ */
+export const getListServerFilesUrl = (
+  id: string,
+  params?: ListServerFilesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/servers/${id}/files?${stringifiedParams}`
+    : `/api/servers/${id}/files`;
+};
+
+export const listServerFiles = async (
+  id: string,
+  params?: ListServerFilesParams,
+  options?: RequestInit,
+): Promise<FileListResponse> => {
+  return customFetch<FileListResponse>(getListServerFilesUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListServerFilesQueryKey = (
+  id: string,
+  params?: ListServerFilesParams,
+) => {
+  return [`/api/servers/${id}/files`, ...(params ? [params] : [])] as const;
+};
+
+export const getListServerFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServerFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  params?: ListServerFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListServerFilesQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listServerFiles>>> = ({
+    signal,
+  }) => listServerFiles(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServerFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListServerFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServerFiles>>
+>;
+export type ListServerFilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List files in a directory
+ */
+
+export function useListServerFiles<
+  TData = Awaited<ReturnType<typeof listServerFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  params?: ListServerFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListServerFilesQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a file
+ */
+export const getDeleteServerFileUrl = (
+  id: string,
+  params: DeleteServerFileParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/servers/${id}/files?${stringifiedParams}`
+    : `/api/servers/${id}/files`;
+};
+
+export const deleteServerFile = async (
+  id: string,
+  params: DeleteServerFileParams,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteServerFileUrl(id, params), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteServerFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteServerFile>>,
+    TError,
+    { id: string; params: DeleteServerFileParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteServerFile>>,
+  TError,
+  { id: string; params: DeleteServerFileParams },
+  TContext
+> => {
+  const mutationKey = ["deleteServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteServerFile>>,
+    { id: string; params: DeleteServerFileParams }
+  > = (props) => {
+    const { id, params } = props ?? {};
+
+    return deleteServerFile(id, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteServerFile>>
+>;
+
+export type DeleteServerFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a file
+ */
+export const useDeleteServerFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteServerFile>>,
+    TError,
+    { id: string; params: DeleteServerFileParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteServerFile>>,
+  TError,
+  { id: string; params: DeleteServerFileParams },
+  TContext
+> => {
+  return useMutation(getDeleteServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Read file contents
+ */
+export const getReadServerFileUrl = (
+  id: string,
+  params: ReadServerFileParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/servers/${id}/files/read?${stringifiedParams}`
+    : `/api/servers/${id}/files/read`;
+};
+
+export const readServerFile = async (
+  id: string,
+  params: ReadServerFileParams,
+  options?: RequestInit,
+): Promise<FileReadResponse> => {
+  return customFetch<FileReadResponse>(getReadServerFileUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getReadServerFileQueryKey = (
+  id: string,
+  params?: ReadServerFileParams,
+) => {
+  return [
+    `/api/servers/${id}/files/read`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getReadServerFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof readServerFile>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  params: ReadServerFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof readServerFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getReadServerFileQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof readServerFile>>> = ({
+    signal,
+  }) => readServerFile(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof readServerFile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ReadServerFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof readServerFile>>
+>;
+export type ReadServerFileQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Read file contents
+ */
+
+export function useReadServerFile<
+  TData = Awaited<ReturnType<typeof readServerFile>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  params: ReadServerFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof readServerFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReadServerFileQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Write file contents
+ */
+export const getWriteServerFileUrl = (
+  id: string,
+  params: WriteServerFileParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/servers/${id}/files/write?${stringifiedParams}`
+    : `/api/servers/${id}/files/write`;
+};
+
+export const writeServerFile = async (
+  id: string,
+  fileWriteRequest: FileWriteRequest,
+  params: WriteServerFileParams,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getWriteServerFileUrl(id, params), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileWriteRequest),
+  });
+};
+
+export const getWriteServerFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof writeServerFile>>,
+    TError,
+    {
+      id: string;
+      data: BodyType<FileWriteRequest>;
+      params: WriteServerFileParams;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof writeServerFile>>,
+  TError,
+  {
+    id: string;
+    data: BodyType<FileWriteRequest>;
+    params: WriteServerFileParams;
+  },
+  TContext
+> => {
+  const mutationKey = ["writeServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof writeServerFile>>,
+    {
+      id: string;
+      data: BodyType<FileWriteRequest>;
+      params: WriteServerFileParams;
+    }
+  > = (props) => {
+    const { id, data, params } = props ?? {};
+
+    return writeServerFile(id, data, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WriteServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof writeServerFile>>
+>;
+export type WriteServerFileMutationBody = BodyType<FileWriteRequest>;
+export type WriteServerFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Write file contents
+ */
+export const useWriteServerFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof writeServerFile>>,
+    TError,
+    {
+      id: string;
+      data: BodyType<FileWriteRequest>;
+      params: WriteServerFileParams;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof writeServerFile>>,
+  TError,
+  {
+    id: string;
+    data: BodyType<FileWriteRequest>;
+    params: WriteServerFileParams;
+  },
+  TContext
+> => {
+  return useMutation(getWriteServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Create a directory
+ */
+export const getCreateServerDirectoryUrl = (id: string) => {
+  return `/api/servers/${id}/files/mkdir`;
+};
+
+export const createServerDirectory = async (
+  id: string,
+  createServerDirectoryBody: CreateServerDirectoryBody,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getCreateServerDirectoryUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createServerDirectoryBody),
+  });
+};
+
+export const getCreateServerDirectoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerDirectory>>,
+    TError,
+    { id: string; data: BodyType<CreateServerDirectoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createServerDirectory>>,
+  TError,
+  { id: string; data: BodyType<CreateServerDirectoryBody> },
+  TContext
+> => {
+  const mutationKey = ["createServerDirectory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createServerDirectory>>,
+    { id: string; data: BodyType<CreateServerDirectoryBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createServerDirectory(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateServerDirectoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createServerDirectory>>
+>;
+export type CreateServerDirectoryMutationBody =
+  BodyType<CreateServerDirectoryBody>;
+export type CreateServerDirectoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a directory
+ */
+export const useCreateServerDirectory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerDirectory>>,
+    TError,
+    { id: string; data: BodyType<CreateServerDirectoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createServerDirectory>>,
+  TError,
+  { id: string; data: BodyType<CreateServerDirectoryBody> },
+  TContext
+> => {
+  return useMutation(getCreateServerDirectoryMutationOptions(options));
+};
+
+/**
+ * @summary List installed plugins
+ */
+export const getListServerPluginsUrl = (id: string) => {
+  return `/api/servers/${id}/plugins`;
+};
+
+export const listServerPlugins = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ServerPlugin[]> => {
+  return customFetch<ServerPlugin[]>(getListServerPluginsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListServerPluginsQueryKey = (id: string) => {
+  return [`/api/servers/${id}/plugins`] as const;
+};
+
+export const getListServerPluginsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServerPlugins>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerPlugins>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListServerPluginsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listServerPlugins>>
+  > = ({ signal }) => listServerPlugins(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServerPlugins>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListServerPluginsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServerPlugins>>
+>;
+export type ListServerPluginsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List installed plugins
+ */
+
+export function useListServerPlugins<
+  TData = Awaited<ReturnType<typeof listServerPlugins>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerPlugins>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListServerPluginsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Install a plugin
+ */
+export const getInstallServerPluginUrl = (id: string) => {
+  return `/api/servers/${id}/plugins`;
+};
+
+export const installServerPlugin = async (
+  id: string,
+  installPluginRequest: InstallPluginRequest,
+  options?: RequestInit,
+): Promise<ServerPlugin> => {
+  return customFetch<ServerPlugin>(getInstallServerPluginUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(installPluginRequest),
+  });
+};
+
+export const getInstallServerPluginMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof installServerPlugin>>,
+    TError,
+    { id: string; data: BodyType<InstallPluginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof installServerPlugin>>,
+  TError,
+  { id: string; data: BodyType<InstallPluginRequest> },
+  TContext
+> => {
+  const mutationKey = ["installServerPlugin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof installServerPlugin>>,
+    { id: string; data: BodyType<InstallPluginRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return installServerPlugin(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InstallServerPluginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof installServerPlugin>>
+>;
+export type InstallServerPluginMutationBody = BodyType<InstallPluginRequest>;
+export type InstallServerPluginMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Install a plugin
+ */
+export const useInstallServerPlugin = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof installServerPlugin>>,
+    TError,
+    { id: string; data: BodyType<InstallPluginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof installServerPlugin>>,
+  TError,
+  { id: string; data: BodyType<InstallPluginRequest> },
+  TContext
+> => {
+  return useMutation(getInstallServerPluginMutationOptions(options));
+};
+
+/**
+ * @summary Enable or disable a plugin
+ */
+export const getToggleServerPluginUrl = (id: string, pluginId: string) => {
+  return `/api/servers/${id}/plugins/${pluginId}`;
+};
+
+export const toggleServerPlugin = async (
+  id: string,
+  pluginId: string,
+  toggleServerPluginBody: ToggleServerPluginBody,
+  options?: RequestInit,
+): Promise<ServerPlugin> => {
+  return customFetch<ServerPlugin>(getToggleServerPluginUrl(id, pluginId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(toggleServerPluginBody),
+  });
+};
+
+export const getToggleServerPluginMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleServerPlugin>>,
+    TError,
+    { id: string; pluginId: string; data: BodyType<ToggleServerPluginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleServerPlugin>>,
+  TError,
+  { id: string; pluginId: string; data: BodyType<ToggleServerPluginBody> },
+  TContext
+> => {
+  const mutationKey = ["toggleServerPlugin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleServerPlugin>>,
+    { id: string; pluginId: string; data: BodyType<ToggleServerPluginBody> }
+  > = (props) => {
+    const { id, pluginId, data } = props ?? {};
+
+    return toggleServerPlugin(id, pluginId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleServerPluginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleServerPlugin>>
+>;
+export type ToggleServerPluginMutationBody = BodyType<ToggleServerPluginBody>;
+export type ToggleServerPluginMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Enable or disable a plugin
+ */
+export const useToggleServerPlugin = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleServerPlugin>>,
+    TError,
+    { id: string; pluginId: string; data: BodyType<ToggleServerPluginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleServerPlugin>>,
+  TError,
+  { id: string; pluginId: string; data: BodyType<ToggleServerPluginBody> },
+  TContext
+> => {
+  return useMutation(getToggleServerPluginMutationOptions(options));
+};
+
+/**
+ * @summary Remove a plugin
+ */
+export const getRemoveServerPluginUrl = (id: string, pluginId: string) => {
+  return `/api/servers/${id}/plugins/${pluginId}`;
+};
+
+export const removeServerPlugin = async (
+  id: string,
+  pluginId: string,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getRemoveServerPluginUrl(id, pluginId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveServerPluginMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeServerPlugin>>,
+    TError,
+    { id: string; pluginId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeServerPlugin>>,
+  TError,
+  { id: string; pluginId: string },
+  TContext
+> => {
+  const mutationKey = ["removeServerPlugin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeServerPlugin>>,
+    { id: string; pluginId: string }
+  > = (props) => {
+    const { id, pluginId } = props ?? {};
+
+    return removeServerPlugin(id, pluginId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveServerPluginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeServerPlugin>>
+>;
+
+export type RemoveServerPluginMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a plugin
+ */
+export const useRemoveServerPlugin = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeServerPlugin>>,
+    TError,
+    { id: string; pluginId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeServerPlugin>>,
+  TError,
+  { id: string; pluginId: string },
+  TContext
+> => {
+  return useMutation(getRemoveServerPluginMutationOptions(options));
+};
+
+/**
+ * @summary List subdomains for a server
+ */
+export const getListServerSubdomainsUrl = (id: string) => {
+  return `/api/servers/${id}/subdomains`;
+};
+
+export const listServerSubdomains = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Subdomain[]> => {
+  return customFetch<Subdomain[]>(getListServerSubdomainsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListServerSubdomainsQueryKey = (id: string) => {
+  return [`/api/servers/${id}/subdomains`] as const;
+};
+
+export const getListServerSubdomainsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServerSubdomains>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerSubdomains>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListServerSubdomainsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listServerSubdomains>>
+  > = ({ signal }) => listServerSubdomains(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServerSubdomains>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListServerSubdomainsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServerSubdomains>>
+>;
+export type ListServerSubdomainsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List subdomains for a server
+ */
+
+export function useListServerSubdomains<
+  TData = Awaited<ReturnType<typeof listServerSubdomains>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServerSubdomains>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListServerSubdomainsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a subdomain
+ */
+export const getCreateServerSubdomainUrl = (id: string) => {
+  return `/api/servers/${id}/subdomains`;
+};
+
+export const createServerSubdomain = async (
+  id: string,
+  createSubdomainRequest: CreateSubdomainRequest,
+  options?: RequestInit,
+): Promise<Subdomain> => {
+  return customFetch<Subdomain>(getCreateServerSubdomainUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSubdomainRequest),
+  });
+};
+
+export const getCreateServerSubdomainMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerSubdomain>>,
+    TError,
+    { id: string; data: BodyType<CreateSubdomainRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createServerSubdomain>>,
+  TError,
+  { id: string; data: BodyType<CreateSubdomainRequest> },
+  TContext
+> => {
+  const mutationKey = ["createServerSubdomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createServerSubdomain>>,
+    { id: string; data: BodyType<CreateSubdomainRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createServerSubdomain(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateServerSubdomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createServerSubdomain>>
+>;
+export type CreateServerSubdomainMutationBody =
+  BodyType<CreateSubdomainRequest>;
+export type CreateServerSubdomainMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a subdomain
+ */
+export const useCreateServerSubdomain = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerSubdomain>>,
+    TError,
+    { id: string; data: BodyType<CreateSubdomainRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createServerSubdomain>>,
+  TError,
+  { id: string; data: BodyType<CreateSubdomainRequest> },
+  TContext
+> => {
+  return useMutation(getCreateServerSubdomainMutationOptions(options));
+};
+
+/**
+ * @summary Delete a subdomain
+ */
+export const getDeleteServerSubdomainUrl = (id: string, subId: string) => {
+  return `/api/servers/${id}/subdomains/${subId}`;
+};
+
+export const deleteServerSubdomain = async (
+  id: string,
+  subId: string,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteServerSubdomainUrl(id, subId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteServerSubdomainMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteServerSubdomain>>,
+    TError,
+    { id: string; subId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteServerSubdomain>>,
+  TError,
+  { id: string; subId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteServerSubdomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteServerSubdomain>>,
+    { id: string; subId: string }
+  > = (props) => {
+    const { id, subId } = props ?? {};
+
+    return deleteServerSubdomain(id, subId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteServerSubdomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteServerSubdomain>>
+>;
+
+export type DeleteServerSubdomainMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a subdomain
+ */
+export const useDeleteServerSubdomain = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteServerSubdomain>>,
+    TError,
+    { id: string; subId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteServerSubdomain>>,
+  TError,
+  { id: string; subId: string },
+  TContext
+> => {
+  return useMutation(getDeleteServerSubdomainMutationOptions(options));
 };

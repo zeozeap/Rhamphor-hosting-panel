@@ -409,6 +409,329 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /servers/{id}/update:
+    patch:
+      operationId: updateServer
+      tags: [servers]
+      summary: Update server settings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServerRequest"
+      responses:
+        "200":
+          description: Server updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+
+  /servers/{id}/files:
+    get:
+      operationId: listServerFiles
+      tags: [servers]
+      summary: List files in a directory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileListResponse"
+    delete:
+      operationId: deleteServerFile
+      tags: [servers]
+      summary: Delete a file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/files/read:
+    get:
+      operationId: readServerFile
+      tags: [servers]
+      summary: Read file contents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileReadResponse"
+
+  /servers/{id}/files/write:
+    put:
+      operationId: writeServerFile
+      tags: [servers]
+      summary: Write file contents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileWriteRequest"
+      responses:
+        "200":
+          description: File saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/files/mkdir:
+    post:
+      operationId: createServerDirectory
+      tags: [servers]
+      summary: Create a directory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  type: string
+              required:
+                - path
+      responses:
+        "200":
+          description: Directory created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+
+  /servers/{id}/plugins:
+    get:
+      operationId: listServerPlugins
+      tags: [servers]
+      summary: List installed plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plugin list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerPlugin"
+    post:
+      operationId: installServerPlugin
+      tags: [servers]
+      summary: Install a plugin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstallPluginRequest"
+      responses:
+        "201":
+          description: Plugin installed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerPlugin"
+
+  /servers/{id}/plugins/{pluginId}:
+    patch:
+      operationId: toggleServerPlugin
+      tags: [servers]
+      summary: Enable or disable a plugin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pluginId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+              required:
+                - enabled
+      responses:
+        "200":
+          description: Plugin updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerPlugin"
+    delete:
+      operationId: removeServerPlugin
+      tags: [servers]
+      summary: Remove a plugin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pluginId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plugin removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /servers/{id}/subdomains:
+    get:
+      operationId: listServerSubdomains
+      tags: [servers]
+      summary: List subdomains for a server
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subdomains list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subdomain"
+    post:
+      operationId: createServerSubdomain
+      tags: [servers]
+      summary: Create a subdomain
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubdomainRequest"
+      responses:
+        "201":
+          description: Subdomain created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subdomain"
+
+  /servers/{id}/subdomains/{subId}:
+    delete:
+      operationId: deleteServerSubdomain
+      tags: [servers]
+      summary: Delete a subdomain
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subdomain deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -727,3 +1050,150 @@ components:
         - port
         - memory
         - disk
+
+    UpdateServerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        memory:
+          type: number
+        disk:
+          type: number
+        maxPlayers:
+          type: number
+        port:
+          type: number
+
+    FileEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        isDir:
+          type: boolean
+        size:
+          type: number
+        updatedAt:
+          type: string
+      required:
+        - name
+        - path
+        - isDir
+        - size
+        - updatedAt
+
+    FileListResponse:
+      type: object
+      properties:
+        path:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileEntry"
+      required:
+        - path
+        - entries
+
+    FileReadResponse:
+      type: object
+      properties:
+        path:
+          type: string
+        content:
+          type: string
+        size:
+          type: number
+        updatedAt:
+          type: string
+      required:
+        - path
+        - content
+        - size
+        - updatedAt
+
+    FileWriteRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    ServerPlugin:
+      type: object
+      properties:
+        id:
+          type: string
+        serverId:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        author:
+          type: string
+        filename:
+          type: string
+        fileSize:
+          type: number
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - serverId
+        - name
+        - version
+        - filename
+        - fileSize
+        - enabled
+        - createdAt
+
+    InstallPluginRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+      required:
+        - name
+
+    Subdomain:
+      type: object
+      properties:
+        id:
+          type: string
+        serverId:
+          type: string
+        subdomain:
+          type: string
+        targetPort:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - serverId
+        - subdomain
+        - targetPort
+        - createdAt
+
+    CreateSubdomainRequest:
+      type: object
+      properties:
+        subdomain:
+          type: string
+      required:
+        - subdomain
