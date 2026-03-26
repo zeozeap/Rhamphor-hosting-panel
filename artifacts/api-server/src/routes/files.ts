@@ -3,10 +3,11 @@ import { db } from "@workspace/db";
 import { serversTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import * as serverManager from "../lib/serverManager.js";
+import { requireAuth, requireServerAccess } from "../lib/middleware.js";
 
 const router: IRouter = Router();
 
-router.get("/servers/:id/files", async (req, res) => {
+router.get("/servers/:id/files", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -17,7 +18,7 @@ router.get("/servers/:id/files", async (req, res) => {
   res.json({ path: dirPath, entries });
 });
 
-router.get("/servers/:id/files/read", async (req, res) => {
+router.get("/servers/:id/files/read", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -33,7 +34,7 @@ router.get("/servers/:id/files/read", async (req, res) => {
   res.json({ path: filePath, content: entry.content ?? "", size: entry.size, updatedAt: entry.updatedAt });
 });
 
-router.put("/servers/:id/files/write", async (req, res) => {
+router.put("/servers/:id/files/write", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];

@@ -6,11 +6,23 @@ import { v4 as uuidv4 } from "uuid";
 import { CreateServerBody, ServerPowerActionBody, SendServerCommandBody } from "@workspace/api-zod";
 import * as serverManager from "../lib/serverManager.js";
 import { auditFromReq } from "../lib/auditLogger.js";
+import { requireAuth, requireAdmin, requireServerAccess, getUserRole } from "../lib/middleware.js";
 
 const router: IRouter = Router();
 
-router.get("/servers", async (_req, res) => {
-  const servers = await db.select().from(serversTable).orderBy(serversTable.createdAt);
+router.get("/servers", requireAuth, async (req, res) => {
+  const userId = req.session.userId!;
+  const role = await getUserRole(userId);
+
+  let servers;
+  if (role === "admin") {
+    servers = await db.select().from(serversTable).orderBy(serversTable.createdAt);
+  } else {
+    servers = await db.select().from(serversTable)
+      .where(eq(serversTable.userId, userId))
+      .orderBy(serversTable.createdAt);
+  }
+
   const result = servers.map((s) => {
     const proc = serverManager.getProcess(s.id);
     return { ...s, playerCount: proc?.playerCount ?? 0 };
@@ -18,7 +30,7 @@ router.get("/servers", async (_req, res) => {
   res.json(result);
 });
 
-router.post("/servers", async (req, res) => {
+router.post("/servers", requireAuth, requireAdmin, async (req, res) => {
   const parsed = CreateServerBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -58,7 +70,7 @@ router.post("/servers", async (req, res) => {
   res.status(201).json({ ...server, playerCount: 0 });
 });
 
-router.get("/servers/:id", async (req, res) => {
+router.get("/servers/:id", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const s = servers[0];
@@ -66,7 +78,7 @@ router.get("/servers/:id", async (req, res) => {
   res.json({ ...s, playerCount: proc?.playerCount ?? 0 });
 });
 
-router.patch("/servers/:id/update", async (req, res) => {
+router.patch("/servers/:id/update", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -97,7 +109,7 @@ router.patch("/servers/:id/update", async (req, res) => {
   res.json({ ...updated, playerCount: proc?.playerCount ?? 0 });
 });
 
-router.delete("/servers/:id", async (req, res) => {
+router.delete("/servers/:id", requireAuth, requireAdmin, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   await serverManager.killServer(req.params.id);
@@ -114,7 +126,7 @@ router.delete("/servers/:id", async (req, res) => {
   res.json({ message: "Server deleted successfully" });
 });
 
-router.post("/servers/:id/power", async (req, res) => {
+router.post("/servers/:id/power", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -144,7 +156,7 @@ router.post("/servers/:id/power", async (req, res) => {
   res.json({ message: `Action '${action}' sent to server` });
 });
 
-router.post("/servers/:id/command", async (req, res) => {
+router.post("/servers/:id/command", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -155,7 +167,7 @@ router.post("/servers/:id/command", async (req, res) => {
   res.json({ message: "Command sent" });
 });
 
-router.get("/servers/:id/stats", async (req, res) => {
+router.get("/servers/:id/stats", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -163,7 +175,7 @@ router.get("/servers/:id/stats", async (req, res) => {
   res.json(stats);
 });
 
-router.get("/servers/:id/logs", async (req, res) => {
+router.get("/servers/:id/logs", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const lines = req.query.lines ? Number(req.query.lines) : 100;

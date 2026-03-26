@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { serversTable, serverPluginsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { requireAuth, requireServerAccess } from "../lib/middleware.js";
 
 const router: IRouter = Router();
 
@@ -21,7 +22,7 @@ const POPULAR_PLUGINS: Record<string, { description: string; author: string; lat
   "DiscordSRV": { description: "Discord-Minecraft link plugin", author: "scarsz", latestVersion: "1.27.0" },
 };
 
-router.get("/servers/:id/plugins", async (req, res) => {
+router.get("/servers/:id/plugins", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -29,7 +30,7 @@ router.get("/servers/:id/plugins", async (req, res) => {
   res.json(plugins);
 });
 
-router.post("/servers/:id/plugins", async (req, res) => {
+router.post("/servers/:id/plugins", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -56,7 +57,7 @@ router.post("/servers/:id/plugins", async (req, res) => {
   res.status(201).json(plugin);
 });
 
-router.patch("/servers/:id/plugins/:pluginId", async (req, res) => {
+router.patch("/servers/:id/plugins/:pluginId", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -73,7 +74,7 @@ router.patch("/servers/:id/plugins/:pluginId", async (req, res) => {
   res.json(plugin);
 });
 
-router.delete("/servers/:id/plugins/:pluginId", async (req, res) => {
+router.delete("/servers/:id/plugins/:pluginId", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 

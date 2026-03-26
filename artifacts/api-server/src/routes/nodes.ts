@@ -4,10 +4,11 @@ import { nodesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { CreateNodeBody } from "@workspace/api-zod";
+import { requireAuth, requireAdmin } from "../lib/middleware.js";
 
 const router: IRouter = Router();
 
-router.get("/nodes", async (req, res) => {
+router.get("/nodes", requireAuth, requireAdmin, async (req, res) => {
   const nodes = await db.select().from(nodesTable).orderBy(nodesTable.createdAt);
 
   const serversCount = await db.query.serversTable.findMany({
@@ -23,7 +24,7 @@ router.get("/nodes", async (req, res) => {
   res.json(result);
 });
 
-router.post("/nodes", async (req, res) => {
+router.post("/nodes", requireAuth, requireAdmin, async (req, res) => {
   const parsed = CreateNodeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -41,7 +42,7 @@ router.post("/nodes", async (req, res) => {
   res.status(201).json({ ...node, serversCount: 0 });
 });
 
-router.get("/nodes/:id", async (req, res) => {
+router.get("/nodes/:id", requireAuth, requireAdmin, async (req, res) => {
   const node = await db.select().from(nodesTable).where(eq(nodesTable.id, req.params.id)).limit(1);
 
   if (!node.length) {
@@ -57,7 +58,7 @@ router.get("/nodes/:id", async (req, res) => {
   res.json({ ...node[0], serversCount: serversCount.length });
 });
 
-router.delete("/nodes/:id", async (req, res) => {
+router.delete("/nodes/:id", requireAuth, requireAdmin, async (req, res) => {
   const node = await db.select().from(nodesTable).where(eq(nodesTable.id, req.params.id)).limit(1);
   if (!node.length) {
     res.status(404).json({ error: "Node not found" });

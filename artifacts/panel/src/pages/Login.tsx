@@ -30,8 +30,8 @@ export function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(loginValue, password);
-      setLocation("/");
+      const userData = await login(loginValue, password);
+      setLocation(userData?.role === "admin" ? "/" : "/my-servers");
     } catch (err: any) {
       setError(err?.message || "Invalid credentials");
       recaptchaRef.current?.reset();

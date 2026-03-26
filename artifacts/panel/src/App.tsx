@@ -56,36 +56,69 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        setLocation("/login");
+      } else if (user.role !== "admin") {
+        setLocation("/my-servers");
+      }
+    }
+  }, [isLoading, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/">
-        <ProtectedRoute component={Dashboard} />
+        <AdminRoute component={Dashboard} />
       </Route>
       <Route path="/servers">
-        <ProtectedRoute component={Servers} />
+        <AdminRoute component={Servers} />
       </Route>
       <Route path="/servers/new">
-        <ProtectedRoute component={CreateServer} />
+        <AdminRoute component={CreateServer} />
       </Route>
       <Route path="/servers/:id">
         <ProtectedRoute component={ServerDetail} />
       </Route>
       <Route path="/nodes">
-        <ProtectedRoute component={Nodes} />
+        <AdminRoute component={Nodes} />
       </Route>
       <Route path="/users">
-        <ProtectedRoute component={Users} />
+        <AdminRoute component={Users} />
       </Route>
       <Route path="/my-servers">
         <ProtectedRoute component={MyServers} />
       </Route>
       <Route path="/nests">
-        <ProtectedRoute component={Nests} />
+        <AdminRoute component={Nests} />
       </Route>
       <Route path="/activity">
-        <ProtectedRoute component={ActivityLog} />
+        <AdminRoute component={ActivityLog} />
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={Settings} />

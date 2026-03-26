@@ -5,7 +5,7 @@ import { AuthUser, useGetMe, login as apiLogin, logout as apiLogout } from '@wor
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (login: string, pass: string) => Promise<void>;
+  login: (login: string, pass: string) => Promise<AuthUser | undefined>;
   logout: () => Promise<void>;
 }
 
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userData = await apiLogin({ login: loginStr, password: pass });
       setUser(userData);
+      return userData;
     } catch (e: any) {
       throw new Error(e?.error || 'Login failed');
     }

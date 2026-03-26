@@ -3,10 +3,11 @@ import { db } from "@workspace/db";
 import { serversTable, subdomainsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { requireAuth, requireServerAccess } from "../lib/middleware.js";
 
 const router: IRouter = Router();
 
-router.get("/servers/:id/subdomains", async (req, res) => {
+router.get("/servers/:id/subdomains", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
@@ -14,7 +15,7 @@ router.get("/servers/:id/subdomains", async (req, res) => {
   res.json(subdomains);
 });
 
-router.post("/servers/:id/subdomains", async (req, res) => {
+router.post("/servers/:id/subdomains", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -44,7 +45,7 @@ router.post("/servers/:id/subdomains", async (req, res) => {
   res.status(201).json(sub);
 });
 
-router.delete("/servers/:id/subdomains/:subId", async (req, res) => {
+router.delete("/servers/:id/subdomains/:subId", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
 
