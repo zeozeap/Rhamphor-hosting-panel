@@ -1,9 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Server, Users, HardDrive, LayoutDashboard, Settings } from "lucide-react";
+import { Server, Users, HardDrive, LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
 
   const links = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -42,22 +44,46 @@ export function Sidebar() {
               {isActive && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md" />
               )}
-              <Icon className={cn("w-5 h-5", isActive ? "text-primary drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
+              <Icon className={cn("w-5 h-5", isActive ? "text-primary drop-shadow-[0_0_8px_rgba(0,214,214,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
               {link.label}
             </Link>
           );
         })}
+
+        <div className="mt-8 pt-4 border-t border-border/50">
+          <Link href="/settings" className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+            location.startsWith('/settings') 
+              ? "bg-primary/10 text-primary" 
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}>
+            {location.startsWith('/settings') && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md" />
+            )}
+            <Settings className={cn("w-5 h-5", location.startsWith('/settings') ? "text-primary drop-shadow-[0_0_8px_rgba(0,214,214,0.5)]" : "text-muted-foreground group-hover:text-foreground")} />
+            Settings
+          </Link>
+        </div>
       </div>
 
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold border border-border">
-            AD
+        <div className="flex items-center justify-between px-2 py-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-bold border border-primary/30">
+              {user?.username?.substring(0, 2).toUpperCase() || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium truncate max-w-[100px]">{user?.username}</span>
+              <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">Admin User</span>
-            <span className="text-xs text-muted-foreground">Administrator</span>
-          </div>
+          <button 
+            onClick={() => logout()} 
+            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+            title="Log out"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </aside>

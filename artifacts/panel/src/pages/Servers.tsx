@@ -1,25 +1,49 @@
 import { Layout } from "@/components/layout/Layout";
-import { useListServers } from "@workspace/api-client-react";
+import { useListServers, useServerPowerAction, useDeleteServer } from "@workspace/api-client-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Link } from "wouter";
-import { Server, MemoryStick, HardDrive, Cpu, Plus, Search } from "lucide-react";
+import { Server, MemoryStick, HardDrive, Cpu, Plus, Search, Play, Square, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function Servers() {
   const { data: servers, isLoading } = useListServers();
   const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+
+  const { mutate: powerAction } = useServerPowerAction({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/servers"] })
+    }
+  });
+
+  const { mutate: deleteServer } = useDeleteServer({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/servers"] })
+    }
+  });
 
   const filteredServers = servers?.filter(s => 
     s.name.toLowerCase().includes(search.toLowerCase()) || 
     s.id.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handlePower = (id: string, action: "start" | "stop" | "restart") => {
+    powerAction({ id, data: { action } });
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you absolutely sure you want to delete this server?")) {
+      deleteServer({ id });
+    }
+  };
+
   return (
     <Layout 
       title="Servers"
       actions={
-        <Link href="/servers/new" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(57,255,20,0.2)] hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] flex items-center gap-2">
+        <Link href="/servers/new" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(0,214,214,0.2)] hover:shadow-[0_0_20px_rgba(0,214,214,0.4)] flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Create Server
         </Link>
@@ -63,7 +87,7 @@ export function Servers() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-card border border-border hover:border-primary/50 rounded-xl overflow-hidden transition-all duration-300 group hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] relative"
+              className="bg-card border border-border hover:border-primary/50 rounded-xl overflow-hidden transition-all duration-300 group hover:shadow-[0_8px_30px_rgba(0,214,214,0.12)] relative"
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
@@ -71,7 +95,9 @@ export function Servers() {
                     <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{server.name}</h3>
                     <p className="text-xs text-muted-foreground font-mono bg-secondary px-2 py-0.5 rounded-md inline-block">{server.id.substring(0, 8)}</p>
                   </div>
-                  <StatusBadge status={server.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={server.status} />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -93,9 +119,25 @@ export function Servers() {
                   </div>
                 </div>
 
-                <Link href={`/servers/${server.id}`} className="w-full flex justify-center py-2.5 rounded-lg bg-secondary text-foreground font-medium group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                  Manage Server
-                </Link>
+                <div className="flex gap-2">
+                  <Link href={`/servers/${server.id}`} className="flex-1 flex justify-center py-2.5 rounded-lg bg-secondary text-foreground font-medium hover:bg-primary hover:text-primary-foreground transition-all">
+                    Manage Server
+                  </Link>
+                  <div className="flex items-center bg-secondary rounded-lg border border-border overflow-hidden">
+                    <button onClick={() => handlePower(server.id, 'start')} className="p-2.5 text-green-500 hover:bg-background transition-colors" title="Start">
+                      <Play className="w-4 h-4 fill-current" />
+                    </button>
+                    <button onClick={() => handlePower(server.id, 'restart')} className="p-2.5 text-blue-500 hover:bg-background transition-colors border-l border-border" title="Restart">
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handlePower(server.id, 'stop')} className="p-2.5 text-orange-500 hover:bg-background transition-colors border-l border-border" title="Stop">
+                      <Square className="w-4 h-4 fill-current" />
+                    </button>
+                    <button onClick={() => handleDelete(server.id)} className="p-2.5 text-destructive hover:bg-background transition-colors border-l border-border" title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}

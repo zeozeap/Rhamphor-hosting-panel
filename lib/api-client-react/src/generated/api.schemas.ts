@@ -9,6 +9,32 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface LoginRequest {
+  login: string;
+  password: string;
+}
+
+export type AuthUserRole = (typeof AuthUserRole)[keyof typeof AuthUserRole];
+
+export const AuthUserRole = {
+  admin: "admin",
+  user: "user",
+} as const;
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  email: string;
+  role: AuthUserRole;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  username?: string;
+  email?: string;
+  password?: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }

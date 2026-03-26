@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./authUser";
+export * from "./authUserRole";
 export * from "./commandRequest";
 export * from "./createNodeRequest";
 export * from "./createServerRequest";
@@ -15,6 +17,7 @@ export * from "./createUserRequestRole";
 export * from "./errorResponse";
 export * from "./getServerLogsParams";
 export * from "./healthStatus";
+export * from "./loginRequest";
 export * from "./logsResponse";
 export * from "./messageResponse";
 export * from "./node";
@@ -25,5 +28,6 @@ export * from "./server";
 export * from "./serverServerType";
 export * from "./serverStats";
 export * from "./serverStatus";
+export * from "./updateProfileRequest";
 export * from "./user";
 export * from "./userRole";

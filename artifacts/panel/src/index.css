@@ -5,46 +5,50 @@
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Dark mode professional with neon green */
-  --color-background: hsl(240 10% 3%);
-  --color-foreground: hsl(0 0% 95%);
+  --color-background: hsl(220 20% 8%);
+  --color-foreground: hsl(210 40% 96%);
   
-  --color-card: hsl(240 10% 6%);
-  --color-card-foreground: hsl(0 0% 95%);
-  --color-card-border: hsl(240 10% 12%);
+  --color-card: hsl(220 18% 11%);
+  --color-card-foreground: hsl(210 40% 96%);
+  --color-card-border: hsl(220 15% 18%);
   
-  --color-popover: hsl(240 10% 6%);
-  --color-popover-foreground: hsl(0 0% 95%);
-  --color-popover-border: hsl(240 10% 12%);
+  --color-popover: hsl(220 18% 11%);
+  --color-popover-foreground: hsl(210 40% 96%);
+  --color-popover-border: hsl(220 15% 18%);
   
-  /* Neon Green */
-  --color-primary: hsl(110 100% 54%);
-  --color-primary-foreground: hsl(240 10% 4%);
+  --color-primary: hsl(187 100% 42%);
+  --color-primary-foreground: hsl(220 20% 8%);
   
-  --color-secondary: hsl(240 10% 12%);
-  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-secondary: hsl(220 18% 15%);
+  --color-secondary-foreground: hsl(210 40% 90%);
   
-  --color-muted: hsl(240 10% 12%);
-  --color-muted-foreground: hsl(240 5% 65%);
+  --color-muted: hsl(220 18% 13%);
+  --color-muted-foreground: hsl(210 15% 55%);
   
-  --color-accent: hsl(110 100% 54% / 0.1);
-  --color-accent-foreground: hsl(110 100% 54%);
+  --color-accent: hsl(220 18% 16%);
+  --color-accent-foreground: hsl(210 40% 96%);
   
-  --color-destructive: hsl(0 84% 60%);
+  --color-destructive: hsl(0 72% 51%);
   --color-destructive-foreground: hsl(0 0% 98%);
   
-  --color-border: hsl(240 10% 15%);
-  --color-input: hsl(240 10% 12%);
-  --color-ring: hsl(110 100% 54% / 0.5);
+  --color-border: hsl(220 15% 18%);
+  --color-input: hsl(220 15% 20%);
+  --color-ring: hsl(187 100% 42%);
 
-  --color-sidebar: hsl(240 10% 4%);
-  --color-sidebar-foreground: hsl(0 0% 95%);
-  --color-sidebar-border: hsl(240 10% 12%);
-  --color-sidebar-primary: hsl(110 100% 54%);
-  --color-sidebar-primary-foreground: hsl(240 10% 4%);
-  --color-sidebar-accent: hsl(240 10% 12%);
-  --color-sidebar-accent-foreground: hsl(0 0% 98%);
-  --color-sidebar-ring: hsl(110 100% 54% / 0.5);
+  --color-sidebar: hsl(220 22% 7%);
+  --color-sidebar-foreground: hsl(210 35% 90%);
+  --color-sidebar-border: hsl(220 15% 14%);
+  --color-sidebar-primary: hsl(187 100% 42%);
+  --color-sidebar-primary-foreground: hsl(220 20% 8%);
+  --color-sidebar-accent: hsl(220 18% 14%);
+  --color-sidebar-accent-foreground: hsl(210 40% 96%);
+  --color-sidebar-ring: hsl(187 100% 42%);
+
+  --color-chart-1: hsl(187 100% 42%);
+  --color-chart-2: hsl(190 90% 50%);
+  --color-chart-3: hsl(195 80% 60%);
+  --color-chart-4: hsl(200 70% 70%);
+  --color-chart-5: hsl(205 60% 80%);
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
@@ -65,7 +69,6 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
   
-  /* Custom scrollbar for terminal/general */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -87,11 +90,11 @@
   }
   
   .neon-glow {
-    box-shadow: 0 0 15px hsl(110 100% 54% / 0.3);
+    box-shadow: 0 0 15px hsl(187 100% 42% / 0.3);
   }
   
   .neon-text-glow {
-    text-shadow: 0 0 10px hsl(110 100% 54% / 0.5);
+    text-shadow: 0 0 10px hsl(187 100% 42% / 0.5);
   }
 
   .terminal-output {

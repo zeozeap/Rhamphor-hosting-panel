@@ -8,6 +8,57 @@
 import * as zod from "zod";
 
 /**
+ * @summary Login with username/email and password
+ */
+export const LoginBody = zod.object({
+  login: zod.string(),
+  password: zod.string(),
+});
+
+export const LoginResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["admin", "user"]),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Logout current session
+ */
+export const LogoutResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Get current authenticated user
+ */
+export const GetMeResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["admin", "user"]),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Update own profile
+ */
+export const UpdateProfileBody = zod.object({
+  username: zod.string().optional(),
+  email: zod.string().optional(),
+  password: zod.string().optional(),
+});
+
+export const UpdateProfileResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["admin", "user"]),
+  createdAt: zod.date(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

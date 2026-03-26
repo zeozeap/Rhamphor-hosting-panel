@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { useListServers, useListNodes, useListUsers } from "@workspace/api-client-react";
-import { Server, Users, HardDrive, Activity, ArrowRight } from "lucide-react";
+import { Server, Users, HardDrive, Activity, ArrowRight, Play, Terminal } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
@@ -95,7 +95,7 @@ export function Dashboard() {
               servers?.slice(0, 5).map(server => (
                 <div key={server.id} className="p-4 hover:bg-secondary/50 transition-colors flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`w-2 h-2 rounded-full ${server.status === 'running' ? 'bg-primary shadow-[0_0_5px_rgba(57,255,20,0.8)]' : 'bg-muted-foreground'}`} />
+                    <div className={`w-2 h-2 rounded-full ${server.status === 'running' ? 'bg-primary shadow-[0_0_5px_rgba(0,214,214,0.8)]' : 'bg-muted-foreground'}`} />
                     <div>
                       <p className="font-semibold text-foreground">{server.name}</p>
                       <p className="text-xs text-muted-foreground">{server.serverType} • {server.version}</p>
@@ -110,35 +110,51 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-           <div className="p-6 border-b border-border">
-            <h2 className="text-lg font-semibold">System Information</h2>
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-lg font-semibold">Quick Actions</h2>
+            </div>
+            <div className="p-6 space-y-3">
+              <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary hover:text-primary-foreground transition-colors border border-primary/20">
+                <Play className="w-4 h-4" /> Start All Servers
+              </button>
+              <Link href="/servers" className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-secondary text-foreground font-medium hover:bg-secondary/80 transition-colors border border-border">
+                <Terminal className="w-4 h-4" /> View Console
+              </Link>
+            </div>
           </div>
-          <div className="p-6 space-y-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Global Memory Allocation</span>
-                <span className="font-medium">12 GB / 32 GB</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
-                <div className="bg-blue-500 h-full rounded-full" style={{ width: '37.5%' }} />
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Global Disk Usage</span>
-                <span className="font-medium">150 GB / 1000 GB</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
-                <div className="bg-purple-500 h-full rounded-full" style={{ width: '15%' }} />
-              </div>
-            </div>
 
-            <div className="pt-4 border-t border-border">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Panel Version</span>
-                <span className="font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">v0.1.0-alpha</span>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-lg font-semibold">System Information</h2>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Global Memory Allocation</span>
+                  <span className="font-medium">12 GB / 32 GB</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
+                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '37.5%' }} />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Global Disk Usage</span>
+                  <span className="font-medium">150 GB / 1000 GB</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
+                  <div className="bg-purple-500 h-full rounded-full" style={{ width: '15%' }} />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Panel Version</span>
+                  <span className="font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">v0.1.0-alpha</span>
+                </div>
               </div>
             </div>
           </div>

@@ -1,15 +1,14 @@
 import { Layout } from "@/components/layout/Layout";
-import { useGetServer, useServerPowerAction, useSendServerCommand, useGetServerStats, useDeleteServer } from "@workspace/api-client-react";
+import { useGetServer, useServerPowerAction, useSendServerCommand, useGetServerStats, useDeleteServer, useGetServerLogs } from "@workspace/api-client-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useParams, useLocation } from "wouter";
-import { Play, Square, RotateCcw, Power, Terminal as TerminalIcon, BarChart2, Settings, Trash2 } from "lucide-react";
+import { Play, Square, RotateCcw, Power, Terminal as TerminalIcon, BarChart2, Settings, Trash2, Cpu, MemoryStick, HardDrive } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { formatBytes, cn } from "@/lib/utils";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, ResponsiveContainer } from 'recharts';
 import { useQueryClient } from "@tanstack/react-query";
 
-// Mock historical data since API only returns current point
 const generateMockHistory = (currentValue: number) => {
   return Array.from({ length: 20 }).map((_, i) => ({
     time: i,
@@ -23,9 +22,12 @@ export function ServerDetail() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"console" | "stats" | "settings">("console");
   
-  const { data: server, isLoading } = useGetServer(id || "");
+  const { data: server, isLoading } = useGetServer(id || "", {
+    query: { enabled: !!id }
+  });
+  
   const { data: stats } = useGetServerStats(id || "", {
-    query: { refetchInterval: 5000, enabled: activeTab === "stats" && !!id }
+    query: { refetchInterval: 3000, enabled: activeTab === "stats" && !!id }
   });
   
   const { mutate: powerAction, isPending: actionPending } = useServerPowerAction({
@@ -98,7 +100,7 @@ export function ServerDetail() {
 
       <div>
         {activeTab === "console" && <ConsoleTab serverId={server.id} />}
-        {activeTab === "stats" && stats && <StatsTab stats={stats} server={server} />}
+        {activeTab === "stats" && stats && <StatsTab stats={stats} />}
         {activeTab === "settings" && (
           <div className="max-w-2xl space-y-6">
             <div className="bg-card border border-border rounded-xl p-6">
@@ -130,7 +132,7 @@ export function ServerDetail() {
               <p className="text-sm text-muted-foreground mb-4">Deleting this server is permanent and cannot be undone. All files and data will be removed from the node.</p>
               <button 
                 onClick={() => {
-                  if(confirm('Are you absolutely sure you want to delete this server?')) {
+                  if(window.confirm('Are you absolutely sure you want to delete this server?')) {
                     if(id) deleteServer({ id });
                   }
                 }}
@@ -147,42 +149,56 @@ export function ServerDetail() {
 }
 
 function ConsoleTab({ serverId }: { serverId: string }) {
-  const { messages, isConnected } = useWebSocket(`/ws/servers/${serverId}/console`);
+  const wsUrl = window.location.protocol === 'https:' ? `wss://${window.location.host}/ws/servers/${serverId}/console` : `ws://${window.location.host}/ws/servers/${serverId}/console`;
+  const { messages: wsMessages, isConnected } = useWebSocket(wsUrl);
+  const { data: initialLogs } = useGetServerLogs(serverId, { lines: 100 }, { query: { enabled: !!serverId } });
   const { mutate: sendCommand } = useSendServerCommand();
   const [cmd, setCmd] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const [allMessages, setAllMessages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (initialLogs?.logs) {
+      setAllMessages(prev => [...initialLogs.logs, ...prev]);
+    }
+  }, [initialLogs?.logs]);
+
+  useEffect(() => {
+    if (wsMessages.length > 0) {
+      setAllMessages(prev => [...prev, wsMessages[wsMessages.length - 1]]);
+    }
+  }, [wsMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [allMessages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!cmd.trim()) return;
     sendCommand({ id: serverId, data: { command: cmd } });
+    setAllMessages(prev => [...prev, `> ${cmd}`]);
     setCmd("");
   };
 
-  // Very basic ANSI to HTML converter for the console
   const renderMessage = (msg: string, idx: number) => {
-    let clean = msg.replace(/\x1b\[[0-9;]*m/g, ""); // Strip ANSI for now for simplicity, ideally we parse it
-    // If it contained a red color code, make it red
-    const isRed = msg.includes('\x1b[31m');
-    const isGreen = msg.includes('\x1b[32m');
+    let clean = msg.replace(/\x1b\[[0-9;]*m/g, "");
+    const isCommand = clean.startsWith('> ');
     
     return (
-      <div key={idx} className={cn("hover:bg-white/5 px-2 py-0.5 whitespace-pre-wrap break-all", isRed ? "text-red-400" : isGreen ? "text-green-400" : "text-gray-300")}>
+      <div key={idx} className={cn("hover:bg-white/5 px-2 py-0.5 whitespace-pre-wrap break-all", isCommand ? "text-cyan-400" : "text-green-400")}>
         {clean}
       </div>
     );
   };
 
   return (
-    <div className="bg-[#0c0c0c] border border-border rounded-xl overflow-hidden flex flex-col h-[600px] shadow-2xl">
+    <div className="bg-black/90 border border-border rounded-xl overflow-hidden flex flex-col h-[600px] shadow-2xl">
       <div className="bg-secondary/50 px-4 py-2 border-b border-border flex justify-between items-center text-xs text-muted-foreground font-mono">
-        <span>root@server:~#</span>
+        <span>root@vortex-node:~#</span>
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>}
@@ -192,9 +208,9 @@ function ConsoleTab({ serverId }: { serverId: string }) {
         </div>
       </div>
       
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 terminal-output bg-black/50">
-        {messages.length === 0 && <div className="text-muted-foreground italic">Waiting for console output...</div>}
-        {messages.map(renderMessage)}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 terminal-output">
+        {allMessages.length === 0 && <div className="text-muted-foreground italic">Waiting for console output...</div>}
+        {allMessages.map(renderMessage)}
       </div>
 
       <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-secondary/30 flex gap-3">
@@ -217,9 +233,9 @@ function ConsoleTab({ serverId }: { serverId: string }) {
   );
 }
 
-function StatsTab({ stats, server }: { stats: any, server: any }) {
-  const cpuHistory = generateMockHistory(stats.cpuPercent);
-  const memHistory = generateMockHistory(stats.memoryUsed);
+function StatsTab({ stats }: { stats: any }) {
+  const cpuData = [{ name: 'CPU', value: stats.cpuPercent }];
+  const memData = [{ name: 'Memory', used: stats.memoryUsed, free: stats.memoryLimit - stats.memoryUsed }];
 
   return (
     <div className="space-y-6">
@@ -228,19 +244,13 @@ function StatsTab({ stats, server }: { stats: any, server: any }) {
           <h3 className="text-sm text-muted-foreground font-medium mb-4 flex items-center gap-2">
             <Cpu className="w-4 h-4 text-primary" /> CPU Usage
           </h3>
-          <div className="text-3xl font-bold mb-4">{stats.cpuPercent.toFixed(1)}%</div>
-          <div className="h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={cpuHistory}>
-                <defs>
-                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(110 100% 54%)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(110 100% 54%)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="value" stroke="hsl(110 100% 54%)" fillOpacity={1} fill="url(#colorCpu)" strokeWidth={2} isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="text-3xl font-bold mb-4 text-primary">{stats.cpuPercent.toFixed(1)}%</div>
+          <div className="h-32">
+             <ResponsiveContainer width="100%" height="100%">
+               <BarChart data={cpuData} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                 <Bar dataKey="value" fill="hsl(187 100% 42%)" radius={[0, 4, 4, 0]} barSize={20} />
+               </BarChart>
+             </ResponsiveContainer>
           </div>
         </div>
 
@@ -248,20 +258,15 @@ function StatsTab({ stats, server }: { stats: any, server: any }) {
           <h3 className="text-sm text-muted-foreground font-medium mb-4 flex items-center gap-2">
             <MemoryStick className="w-4 h-4 text-purple-500" /> Memory Usage
           </h3>
-          <div className="text-3xl font-bold mb-1">{formatBytes(stats.memoryUsed * 1024 * 1024)}</div>
+          <div className="text-3xl font-bold mb-1 text-purple-400">{formatBytes(stats.memoryUsed * 1024 * 1024)}</div>
           <div className="text-xs text-muted-foreground mb-4">/ {formatBytes(stats.memoryLimit * 1024 * 1024)}</div>
-          <div className="h-20">
+          <div className="h-32">
              <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={memHistory}>
-                <defs>
-                  <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="value" stroke="#a855f7" fillOpacity={1} fill="url(#colorMem)" strokeWidth={2} isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+               <BarChart data={memData} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }} stackOffset="expand">
+                 <Bar dataKey="used" stackId="a" fill="#a855f7" radius={[4, 0, 0, 4]} barSize={20} />
+                 <Bar dataKey="free" stackId="a" fill="hsl(220 18% 15%)" radius={[0, 4, 4, 0]} barSize={20} />
+               </BarChart>
+             </ResponsiveContainer>
           </div>
         </div>
 
@@ -269,10 +274,10 @@ function StatsTab({ stats, server }: { stats: any, server: any }) {
           <h3 className="text-sm text-muted-foreground font-medium mb-4 flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-blue-500" /> Disk Usage
           </h3>
-          <div className="text-3xl font-bold mb-1">{formatBytes(stats.diskUsed * 1024 * 1024)}</div>
+          <div className="text-3xl font-bold mb-1 text-blue-400">{formatBytes(stats.diskUsed * 1024 * 1024)}</div>
           <div className="text-xs text-muted-foreground mb-6">/ {formatBytes(stats.diskLimit * 1024 * 1024)}</div>
           
-          <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
             <div 
               className={cn("h-full rounded-full transition-all duration-500", (stats.diskUsed / stats.diskLimit) > 0.8 ? "bg-destructive" : "bg-blue-500")}
               style={{ width: `${Math.min(100, (stats.diskUsed / stats.diskLimit) * 100)}%` }} 
