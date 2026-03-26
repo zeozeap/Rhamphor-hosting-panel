@@ -475,6 +475,125 @@ export const CreateServerDirectoryResponse = zod.object({
 });
 
 /**
+ * @summary Create a new empty file
+ */
+export const CreateServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CreateServerFileBody = zod.object({
+  path: zod.string(),
+});
+
+export const CreateServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Rename a file or folder
+ */
+export const RenameServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const RenameServerFileBody = zod.object({
+  path: zod.string(),
+  newName: zod.string(),
+});
+
+export const RenameServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Move a file or folder to a new path
+ */
+export const MoveServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const MoveServerFileBody = zod.object({
+  source: zod.string(),
+  destination: zod.string(),
+});
+
+export const MoveServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Copy a file or folder to a new path
+ */
+export const CopyServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CopyServerFileBody = zod.object({
+  source: zod.string(),
+  destination: zod.string(),
+});
+
+export const CopyServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Compress a file or folder into a zip archive
+ */
+export const CompressServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CompressServerFileBody = zod.object({
+  path: zod.string(),
+  destination: zod.string().optional(),
+});
+
+export const CompressServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Extract a zip file
+ */
+export const ExtractServerFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ExtractServerFileBody = zod.object({
+  path: zod.string(),
+  destination: zod.string().optional(),
+});
+
+export const ExtractServerFileResponse = zod.object({
+  name: zod.string(),
+  path: zod.string(),
+  isDir: zod.boolean(),
+  size: zod.number(),
+  updatedAt: zod.string(),
+});
+
+/**
  * @summary List installed plugins
  */
 export const ListServerPluginsParams = zod.object({

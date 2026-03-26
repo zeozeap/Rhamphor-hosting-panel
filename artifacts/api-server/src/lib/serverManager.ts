@@ -139,7 +139,22 @@ export function writeFile(serverId: string, filePath: string, content: string): 
 export function deleteFilePath(serverId: string, filePath: string): boolean {
   const fs = fileSystems.get(serverId);
   if (!fs) return false;
-  return fs.delete(filePath);
+
+  const entry = fs.get(filePath);
+  if (!entry) return false;
+
+  fs.delete(filePath);
+
+  if (entry.isDir) {
+    const prefix = filePath.endsWith("/") ? filePath : filePath + "/";
+    for (const path of Array.from(fs.keys())) {
+      if (path.startsWith(prefix)) {
+        fs.delete(path);
+      }
+    }
+  }
+
+  return true;
 }
 
 export function createDirectory(serverId: string, dirPath: string): FileEntry {
@@ -158,6 +173,190 @@ export function createDirectory(serverId: string, dirPath: string): FileEntry {
   };
   fs.set(dirPath, entry);
   return entry;
+}
+
+export function createFile(serverId: string, filePath: string): FileEntry | "exists" {
+  let fs = fileSystems.get(serverId);
+  if (!fs) {
+    fs = new Map();
+    fileSystems.set(serverId, fs);
+  }
+  if (fs.has(filePath)) return "exists";
+  const name = filePath.split("/").filter(Boolean).pop() ?? filePath;
+  const entry: FileEntry = {
+    name,
+    path: filePath,
+    isDir: false,
+    content: "",
+    size: 0,
+    updatedAt: new Date().toISOString(),
+  };
+  fs.set(filePath, entry);
+  return entry;
+}
+
+export function renameFilePath(serverId: string, oldPath: string, newName: string): FileEntry | "exists" | null {
+  const fs = fileSystems.get(serverId);
+  if (!fs) return null;
+
+  const entry = fs.get(oldPath);
+  if (!entry) return null;
+
+  const parentDir = oldPath.substring(0, oldPath.lastIndexOf("/")) || "/";
+  const newPath = parentDir === "/" ? `/${newName}` : `${parentDir}/${newName}`;
+
+  if (newPath !== oldPath) {
+    if (fs.has(newPath)) return "exists";
+
+    const updatedEntry: FileEntry = {
+      ...entry,
+      name: newName,
+      path: newPath,
+      updatedAt: new Date().toISOString(),
+    };
+    fs.delete(oldPath);
+    fs.set(newPath, updatedEntry);
+
+    if (entry.isDir) {
+      for (const [path, child] of Array.from(fs.entries())) {
+        if (path.startsWith(oldPath + "/")) {
+          const newChildPath = newPath + path.substring(oldPath.length);
+          const updatedChild: FileEntry = { ...child, path: newChildPath, updatedAt: new Date().toISOString() };
+          fs.delete(path);
+          fs.set(newChildPath, updatedChild);
+        }
+      }
+    }
+
+    return updatedEntry;
+  }
+
+  return entry;
+}
+
+export function moveFilePath(serverId: string, sourcePath: string, destPath: string): FileEntry | "same" | "subtree" | "exists" | null {
+  const fs = fileSystems.get(serverId);
+  if (!fs) return null;
+
+  const entry = fs.get(sourcePath);
+  if (!entry) return null;
+
+  if (sourcePath === destPath) return "same";
+
+  const sourcePrefix = sourcePath.endsWith("/") ? sourcePath : sourcePath + "/";
+  if (entry.isDir && destPath.startsWith(sourcePrefix)) return "subtree";
+
+  if (fs.has(destPath)) return "exists";
+
+  const childrenToMove = entry.isDir
+    ? Array.from(fs.entries()).filter(([path]) => path.startsWith(sourcePrefix))
+    : [];
+
+  fs.delete(sourcePath);
+  for (const [path] of childrenToMove) fs.delete(path);
+
+  const now = new Date().toISOString();
+  const updatedEntry: FileEntry = {
+    ...entry,
+    name: destPath.split("/").filter(Boolean).pop() ?? entry.name,
+    path: destPath,
+    updatedAt: now,
+  };
+  fs.set(destPath, updatedEntry);
+
+  for (const [path, child] of childrenToMove) {
+    const newChildPath = destPath + path.substring(sourcePath.length);
+    fs.set(newChildPath, { ...child, path: newChildPath, updatedAt: now });
+  }
+
+  return updatedEntry;
+}
+
+export function copyFilePath(serverId: string, sourcePath: string, destPath: string): FileEntry | "same" | "subtree" | "exists" | null {
+  const fs = fileSystems.get(serverId);
+  if (!fs) return null;
+
+  const entry = fs.get(sourcePath);
+  if (!entry) return null;
+
+  if (sourcePath === destPath) return "same";
+
+  const sourcePrefix = sourcePath.endsWith("/") ? sourcePath : sourcePath + "/";
+  if (entry.isDir && destPath.startsWith(sourcePrefix)) return "subtree";
+
+  if (fs.has(destPath)) return "exists";
+
+  const childrenToCopy = entry.isDir
+    ? Array.from(fs.entries()).filter(([path]) => path.startsWith(sourcePrefix))
+    : [];
+
+  const now = new Date().toISOString();
+  const name = destPath.split("/").filter(Boolean).pop() ?? entry.name;
+  const copiedEntry: FileEntry = { ...entry, name, path: destPath, updatedAt: now };
+  fs.set(destPath, copiedEntry);
+
+  for (const [path, child] of childrenToCopy) {
+    const newChildPath = destPath + path.substring(sourcePath.length);
+    fs.set(newChildPath, { ...child, path: newChildPath, updatedAt: now });
+  }
+
+  return copiedEntry;
+}
+
+export function compressPath(serverId: string, sourcePath: string, destZipPath: string): FileEntry | "exists" | null {
+  const fs = fileSystems.get(serverId);
+  if (!fs) return null;
+
+  const entry = fs.get(sourcePath);
+  if (!entry) return null;
+
+  if (fs.has(destZipPath)) return "exists";
+
+  const now = new Date().toISOString();
+  const name = destZipPath.split("/").filter(Boolean).pop() ?? "archive.zip";
+  const zipEntry: FileEntry = {
+    name,
+    path: destZipPath,
+    isDir: false,
+    size: Math.max(entry.size, 1024),
+    content: undefined,
+    updatedAt: now,
+  };
+  fs.set(destZipPath, zipEntry);
+  return zipEntry;
+}
+
+export function extractZip(serverId: string, zipPath: string, destDirPath: string): FileEntry | "exists" | null {
+  const fs = fileSystems.get(serverId);
+  if (!fs) return null;
+
+  const zipEntry = fs.get(zipPath);
+  if (!zipEntry || zipEntry.isDir) return null;
+
+  if (fs.has(destDirPath)) return "exists";
+
+  const now = new Date().toISOString();
+  const dirName = destDirPath.split("/").filter(Boolean).pop() ?? "extracted";
+  const dirEntry: FileEntry = {
+    name: dirName,
+    path: destDirPath,
+    isDir: true,
+    size: 0,
+    updatedAt: now,
+  };
+  fs.set(destDirPath, dirEntry);
+
+  const placeholder: FileEntry = {
+    name: "extracted-files.txt",
+    path: `${destDirPath}/extracted-files.txt`,
+    isDir: false,
+    content: `# Extracted from ${zipEntry.name}\n# Extraction simulated by VortexPanel\n`,
+    size: 60,
+    updatedAt: now,
+  };
+  fs.set(placeholder.path, placeholder);
+
+  return dirEntry;
 }
 
 export function initServer(id: string): void {

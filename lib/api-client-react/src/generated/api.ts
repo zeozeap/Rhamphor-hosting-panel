@@ -26,9 +26,14 @@ import type {
   CreateUserRequest,
   DeleteServerFileParams,
   ErrorResponse,
+  FileCompressRequest,
   FileEntry,
+  FileExtractRequest,
   FileListResponse,
+  FilePathRequest,
   FileReadResponse,
+  FileRenameRequest,
+  FileTransferRequest,
   FileWriteRequest,
   GetServerLogsParams,
   HealthStatus,
@@ -2390,6 +2395,528 @@ export const useCreateServerDirectory = <
   TContext
 > => {
   return useMutation(getCreateServerDirectoryMutationOptions(options));
+};
+
+/**
+ * @summary Create a new empty file
+ */
+export const getCreateServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/touch`;
+};
+
+export const createServerFile = async (
+  id: string,
+  filePathRequest: FilePathRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getCreateServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(filePathRequest),
+  });
+};
+
+export const getCreateServerFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerFile>>,
+    TError,
+    { id: string; data: BodyType<FilePathRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createServerFile>>,
+  TError,
+  { id: string; data: BodyType<FilePathRequest> },
+  TContext
+> => {
+  const mutationKey = ["createServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createServerFile>>,
+    { id: string; data: BodyType<FilePathRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createServerFile>>
+>;
+export type CreateServerFileMutationBody = BodyType<FilePathRequest>;
+export type CreateServerFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new empty file
+ */
+export const useCreateServerFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServerFile>>,
+    TError,
+    { id: string; data: BodyType<FilePathRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createServerFile>>,
+  TError,
+  { id: string; data: BodyType<FilePathRequest> },
+  TContext
+> => {
+  return useMutation(getCreateServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Rename a file or folder
+ */
+export const getRenameServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/rename`;
+};
+
+export const renameServerFile = async (
+  id: string,
+  fileRenameRequest: FileRenameRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getRenameServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileRenameRequest),
+  });
+};
+
+export const getRenameServerFileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileRenameRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renameServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileRenameRequest> },
+  TContext
+> => {
+  const mutationKey = ["renameServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renameServerFile>>,
+    { id: string; data: BodyType<FileRenameRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return renameServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenameServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renameServerFile>>
+>;
+export type RenameServerFileMutationBody = BodyType<FileRenameRequest>;
+export type RenameServerFileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Rename a file or folder
+ */
+export const useRenameServerFile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileRenameRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renameServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileRenameRequest> },
+  TContext
+> => {
+  return useMutation(getRenameServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Move a file or folder to a new path
+ */
+export const getMoveServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/move`;
+};
+
+export const moveServerFile = async (
+  id: string,
+  fileTransferRequest: FileTransferRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getMoveServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileTransferRequest),
+  });
+};
+
+export const getMoveServerFileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof moveServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof moveServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileTransferRequest> },
+  TContext
+> => {
+  const mutationKey = ["moveServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof moveServerFile>>,
+    { id: string; data: BodyType<FileTransferRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return moveServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MoveServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof moveServerFile>>
+>;
+export type MoveServerFileMutationBody = BodyType<FileTransferRequest>;
+export type MoveServerFileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Move a file or folder to a new path
+ */
+export const useMoveServerFile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof moveServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof moveServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileTransferRequest> },
+  TContext
+> => {
+  return useMutation(getMoveServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Copy a file or folder to a new path
+ */
+export const getCopyServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/copy`;
+};
+
+export const copyServerFile = async (
+  id: string,
+  fileTransferRequest: FileTransferRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getCopyServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileTransferRequest),
+  });
+};
+
+export const getCopyServerFileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof copyServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileTransferRequest> },
+  TContext
+> => {
+  const mutationKey = ["copyServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof copyServerFile>>,
+    { id: string; data: BodyType<FileTransferRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return copyServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CopyServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof copyServerFile>>
+>;
+export type CopyServerFileMutationBody = BodyType<FileTransferRequest>;
+export type CopyServerFileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Copy a file or folder to a new path
+ */
+export const useCopyServerFile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof copyServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileTransferRequest> },
+  TContext
+> => {
+  return useMutation(getCopyServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Compress a file or folder into a zip archive
+ */
+export const getCompressServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/compress`;
+};
+
+export const compressServerFile = async (
+  id: string,
+  fileCompressRequest: FileCompressRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getCompressServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileCompressRequest),
+  });
+};
+
+export const getCompressServerFileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof compressServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileCompressRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof compressServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileCompressRequest> },
+  TContext
+> => {
+  const mutationKey = ["compressServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof compressServerFile>>,
+    { id: string; data: BodyType<FileCompressRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return compressServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompressServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof compressServerFile>>
+>;
+export type CompressServerFileMutationBody = BodyType<FileCompressRequest>;
+export type CompressServerFileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Compress a file or folder into a zip archive
+ */
+export const useCompressServerFile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof compressServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileCompressRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof compressServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileCompressRequest> },
+  TContext
+> => {
+  return useMutation(getCompressServerFileMutationOptions(options));
+};
+
+/**
+ * @summary Extract a zip file
+ */
+export const getExtractServerFileUrl = (id: string) => {
+  return `/api/servers/${id}/files/extract`;
+};
+
+export const extractServerFile = async (
+  id: string,
+  fileExtractRequest: FileExtractRequest,
+  options?: RequestInit,
+): Promise<FileEntry> => {
+  return customFetch<FileEntry>(getExtractServerFileUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(fileExtractRequest),
+  });
+};
+
+export const getExtractServerFileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof extractServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileExtractRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof extractServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileExtractRequest> },
+  TContext
+> => {
+  const mutationKey = ["extractServerFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof extractServerFile>>,
+    { id: string; data: BodyType<FileExtractRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return extractServerFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExtractServerFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof extractServerFile>>
+>;
+export type ExtractServerFileMutationBody = BodyType<FileExtractRequest>;
+export type ExtractServerFileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Extract a zip file
+ */
+export const useExtractServerFile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof extractServerFile>>,
+    TError,
+    { id: string; data: BodyType<FileExtractRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof extractServerFile>>,
+  TError,
+  { id: string; data: BodyType<FileExtractRequest> },
+  TContext
+> => {
+  return useMutation(getExtractServerFileMutationOptions(options));
 };
 
 /**

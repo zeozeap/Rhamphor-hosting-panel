@@ -5,16 +5,22 @@ import {
   useListServerFiles, useReadServerFile, useWriteServerFile, useDeleteServerFile,
   useListServerPlugins, useInstallServerPlugin, useToggleServerPlugin, useRemoveServerPlugin,
   useListServerSubdomains, useCreateServerSubdomain, useDeleteServerSubdomain,
+  useCreateServerDirectory, useCreateServerFile,
+  useRenameServerFile, useMoveServerFile, useCopyServerFile,
+  useCompressServerFile, useExtractServerFile,
+  type FileEntry,
 } from "@workspace/api-client-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useParams, useLocation } from "wouter";
 import {
   Play, Square, RotateCcw, Power, Terminal as TerminalIcon, BarChart2,
   Settings, Trash2, Cpu, MemoryStick, HardDrive, FolderOpen, Puzzle,
-  Globe, ChevronRight, ChevronDown, File, Folder, Save, ArrowLeft,
+  Globe, ChevronRight, File, Folder, Save, ArrowLeft,
   Plus, Check, X, Copy, Pencil, ToggleLeft, ToggleRight, RefreshCw,
+  Scissors, ClipboardPaste, Archive, PackageOpen, Move, FilePlus, FolderPlus,
+  MoreVertical, AlertCircle,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { formatBytes, cn } from "@/lib/utils";
 import { ResponsiveContainer, BarChart, Bar } from "recharts";
@@ -199,6 +205,12 @@ function ConsoleTab({ serverId }: { serverId: string }) {
   );
 }
 
+type ClipboardEntry = { mode: "cut" | "copy"; path: string; name: string; isDir: boolean };
+type FeedbackMsg = { type: "success" | "error"; text: string };
+type ContextMenuItem =
+  | { separator: true }
+  | { separator?: false; icon: React.ReactNode; label: string; action: () => void; danger?: boolean; disabled?: boolean };
+
 function FilesTab({ serverId }: { serverId: string }) {
   const queryClient = useQueryClient();
   const [currentPath, setCurrentPath] = useState("/");
@@ -206,6 +218,27 @@ function FilesTab({ serverId }: { serverId: string }) {
   const [editorContent, setEditorContent] = useState("");
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null);
+  const [renaming, setRenaming] = useState<{ path: string; name: string } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [clipboard, setClipboard] = useState<ClipboardEntry | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackMsg | null>(null);
+  const [showMoveDialog, setShowMoveDialog] = useState<{ entry: FileEntry } | null>(null);
+  const [moveDestination, setMoveDestination] = useState("");
+  const [showNewFile, setShowNewFile] = useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const invalidateFiles = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: [`/api/servers/${serverId}/files`] });
+  }, [queryClient, serverId]);
+
+  const showFeedback = useCallback((msg: FeedbackMsg) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 3000);
+  }, []);
 
   const { data: fileList, isLoading: listLoading } = useListServerFiles(serverId, { path: currentPath }, { query: { enabled: !!serverId } });
   const { data: fileContent, isLoading: contentLoading } = useReadServerFile(serverId, { path: selectedFile?.path ?? "" }, {
@@ -218,7 +251,7 @@ function FilesTab({ serverId }: { serverId: string }) {
         setSaveStatus("saved");
         setIsDirty(false);
         setTimeout(() => setSaveStatus("idle"), 2000);
-        queryClient.invalidateQueries({ queryKey: ["/api/servers", serverId, "/files"] });
+        invalidateFiles();
       },
       onError: () => { setSaveStatus("error"); setTimeout(() => setSaveStatus("idle"), 2000); }
     }
@@ -227,9 +260,71 @@ function FilesTab({ serverId }: { serverId: string }) {
   const { mutate: deleteFile } = useDeleteServerFile({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/servers", serverId, "/files"] });
+        invalidateFiles();
         if (selectedFile) setSelectedFile(null);
-      }
+        showFeedback({ type: "success", text: "Deleted successfully" });
+      },
+      onError: () => showFeedback({ type: "error", text: "Failed to delete" }),
+    }
+  });
+
+  const { mutate: renameFile } = useRenameServerFile({
+    mutation: {
+      onSuccess: (_data, variables) => {
+        invalidateFiles();
+        setRenaming(null);
+        if (selectedFile && selectedFile.path === variables.data.path) setSelectedFile(null);
+        showFeedback({ type: "success", text: "Renamed successfully" });
+      },
+      onError: () => showFeedback({ type: "error", text: "Rename failed" }),
+    }
+  });
+
+  const { mutate: moveFile } = useMoveServerFile({
+    mutation: {
+      onSuccess: (_data, variables) => {
+        invalidateFiles();
+        setShowMoveDialog(null);
+        setClipboard(null);
+        if (selectedFile && selectedFile.path === variables.data.source) setSelectedFile(null);
+        showFeedback({ type: "success", text: "Moved successfully" });
+      },
+      onError: () => showFeedback({ type: "error", text: "Move failed" }),
+    }
+  });
+
+  const { mutate: copyFile } = useCopyServerFile({
+    mutation: {
+      onSuccess: () => { invalidateFiles(); setClipboard(null); showFeedback({ type: "success", text: "Copied successfully" }); },
+      onError: () => showFeedback({ type: "error", text: "Copy failed" }),
+    }
+  });
+
+  const { mutate: compressFile } = useCompressServerFile({
+    mutation: {
+      onSuccess: () => { invalidateFiles(); showFeedback({ type: "success", text: "Compressed to .zip" }); },
+      onError: () => showFeedback({ type: "error", text: "Compress failed" }),
+    }
+  });
+
+  const { mutate: extractFile } = useExtractServerFile({
+    mutation: {
+      onSuccess: () => { invalidateFiles(); showFeedback({ type: "success", text: "Extracted successfully" }); },
+      onError: () => showFeedback({ type: "error", text: "Extract failed" }),
+    }
+  });
+
+  const { mutate: createDirectory } = useCreateServerDirectory({
+    mutation: {
+      onSuccess: () => { invalidateFiles(); setShowNewFolder(false); setNewItemName(""); showFeedback({ type: "success", text: "Folder created" }); },
+      onError: () => showFeedback({ type: "error", text: "Failed to create folder" }),
+    }
+  });
+
+  const { mutate: createFile } = useCreateServerFile({
+    mutation: {
+      onSuccess: () => { invalidateFiles(); setShowNewFile(false); setNewItemName(""); showFeedback({ type: "success", text: "File created" }); },
+      onError: () => showFeedback({ type: "error", text: "Failed to create file" }),
     }
   });
 
@@ -239,6 +334,19 @@ function FilesTab({ serverId }: { serverId: string }) {
       setIsDirty(false);
     }
   }, [fileContent?.content]);
+
+  useEffect(() => {
+    if (renaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renaming]);
+
+  useEffect(() => {
+    const handler = () => setContextMenu(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
 
   const openFile = (path: string) => {
     setSelectedFile({ path, content: "" });
@@ -261,6 +369,8 @@ function FilesTab({ serverId }: { serverId: string }) {
   };
 
   const isBinary = (name: string) => /\.(jar|zip|gz|png|jpg|jpeg|gif|ico|class|dat|mca|mcr)$/i.test(name);
+  const isZip = (name: string) => /\.zip$/i.test(name);
+
   const getFileIcon = (name: string, isDir: boolean) => {
     if (isDir) return <Folder className="w-4 h-4 text-yellow-400" />;
     if (/\.(yml|yaml)$/i.test(name)) return <File className="w-4 h-4 text-green-400" />;
@@ -268,110 +378,467 @@ function FilesTab({ serverId }: { serverId: string }) {
     if (/\.json$/i.test(name)) return <File className="w-4 h-4 text-orange-400" />;
     if (/\.jar$/i.test(name)) return <File className="w-4 h-4 text-red-400" />;
     if (/\.log$/i.test(name)) return <File className="w-4 h-4 text-gray-400" />;
+    if (/\.zip$/i.test(name)) return <Archive className="w-4 h-4 text-purple-400" />;
     return <File className="w-4 h-4 text-muted-foreground" />;
   };
 
+  const handleContextMenu = (e: React.MouseEvent, entry: FileEntry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, entry });
+  };
+
+  const handleRenameStart = (entry: FileEntry) => {
+    setContextMenu(null);
+    setRenaming({ path: entry.path, name: entry.name });
+    setRenameValue(entry.name);
+  };
+
+  const handleRenameCommit = () => {
+    if (!renaming || !renameValue.trim() || renameValue === renaming.name) {
+      setRenaming(null);
+      return;
+    }
+    renameFile({ id: serverId, data: { path: renaming.path, newName: renameValue.trim() } });
+  };
+
+  const handleCut = (entry: FileEntry) => {
+    setClipboard({ mode: "cut", path: entry.path, name: entry.name, isDir: entry.isDir });
+    setContextMenu(null);
+    showFeedback({ type: "success", text: `"${entry.name}" cut to clipboard` });
+  };
+
+  const handleCopy = (entry: FileEntry) => {
+    setClipboard({ mode: "copy", path: entry.path, name: entry.name, isDir: entry.isDir });
+    setContextMenu(null);
+    showFeedback({ type: "success", text: `"${entry.name}" copied to clipboard` });
+  };
+
+  const handlePaste = (targetDir?: string) => {
+    if (!clipboard) return;
+    const dir = targetDir ?? currentPath;
+    const destPath = dir === "/" ? `/${clipboard.name}` : `${dir}/${clipboard.name}`;
+    if (clipboard.mode === "cut") {
+      moveFile({ id: serverId, data: { source: clipboard.path, destination: destPath } });
+    } else {
+      copyFile({ id: serverId, data: { source: clipboard.path, destination: destPath } });
+    }
+  };
+
+  const handleMoveOpen = (entry: FileEntry) => {
+    setContextMenu(null);
+    setShowMoveDialog({ entry });
+    setMoveDestination(entry.path);
+  };
+
+  const handleMoveConfirm = () => {
+    if (!showMoveDialog) return;
+    moveFile({ id: serverId, data: { source: showMoveDialog.entry.path, destination: moveDestination } });
+  };
+
+  const handleCompress = (entry: FileEntry) => {
+    setContextMenu(null);
+    compressFile({ id: serverId, data: { path: entry.path } });
+  };
+
+  const handleExtract = (entry: FileEntry) => {
+    setContextMenu(null);
+    extractFile({ id: serverId, data: { path: entry.path } });
+  };
+
+  const handleDelete = (entry: FileEntry) => {
+    setContextMenu(null);
+    if (confirm(`Delete "${entry.name}"? This cannot be undone.`)) {
+      deleteFile({ id: serverId, params: { path: entry.path } });
+    }
+  };
+
+  const handleNewFolder = () => {
+    if (!newItemName.trim()) return;
+    const dirPath = currentPath === "/" ? `/${newItemName.trim()}` : `${currentPath}/${newItemName.trim()}`;
+    createDirectory({ id: serverId, data: { path: dirPath } });
+  };
+
+  const handleNewFile = () => {
+    if (!newItemName.trim()) return;
+    const filePath = currentPath === "/" ? `/${newItemName.trim()}` : `${currentPath}/${newItemName.trim()}`;
+    createFile({ id: serverId, data: { path: filePath } });
+  };
+
   return (
-    <div className="grid grid-cols-5 gap-4 h-[600px]">
-      <div className="col-span-2 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-border">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-            {currentPath !== "/" && (
-              <button onClick={navigateUp} className="p-1 hover:text-foreground hover:bg-secondary rounded">
-                <ArrowLeft className="w-3 h-3" />
-              </button>
+    <div className="flex flex-col gap-3 h-[650px]">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 text-xs bg-card border border-border rounded-lg px-3 py-2 flex-1 min-w-0">
+          {currentPath !== "/" && (
+            <button onClick={navigateUp} className="p-1 hover:text-foreground hover:bg-secondary rounded mr-1">
+              <ArrowLeft className="w-3 h-3" />
+            </button>
+          )}
+          {breadcrumbs.map((seg, i) => (
+            <span key={i} className="flex items-center gap-1 text-muted-foreground">
+              {i > 0 && <ChevronRight className="w-3 h-3 flex-shrink-0" />}
+              <span className={i === breadcrumbs.length - 1 ? "text-foreground font-medium" : ""}>{seg || "/"}</span>
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {clipboard && (
+            <button
+              onClick={handlePaste}
+              className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary border border-primary/30 rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
+              title={`Paste "${clipboard.name}" (${clipboard.mode})`}
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" />
+              Paste
+            </button>
+          )}
+          <button
+            onClick={() => { setShowNewFile(false); setShowNewFolder(true); setNewItemName(""); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground border border-border rounded-lg text-xs font-medium hover:bg-secondary/80 transition-colors"
+            title="New folder"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+            Folder
+          </button>
+          <button
+            onClick={() => { setShowNewFolder(false); setShowNewFile(true); setNewItemName(""); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground border border-border rounded-lg text-xs font-medium hover:bg-secondary/80 transition-colors"
+            title="New file"
+          >
+            <FilePlus className="w-3.5 h-3.5" />
+            File
+          </button>
+        </div>
+      </div>
+
+      {(showNewFolder || showNewFile) && (
+        <div className="flex items-center gap-2 bg-card border border-primary/30 rounded-lg px-3 py-2">
+          {showNewFolder ? <FolderPlus className="w-4 h-4 text-yellow-400 flex-shrink-0" /> : <FilePlus className="w-4 h-4 text-primary flex-shrink-0" />}
+          <input
+            autoFocus
+            type="text"
+            value={newItemName}
+            onChange={e => setNewItemName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") showNewFolder ? handleNewFolder() : handleNewFile();
+              if (e.key === "Escape") { setShowNewFolder(false); setShowNewFile(false); setNewItemName(""); }
+            }}
+            placeholder={showNewFolder ? "folder-name" : "file-name.txt"}
+            className="flex-1 bg-transparent text-sm focus:outline-none"
+          />
+          <button
+            onClick={() => showNewFolder ? handleNewFolder() : handleNewFile()}
+            disabled={!newItemName.trim()}
+            className="px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium disabled:opacity-50"
+          >
+            Create
+          </button>
+          <button onClick={() => { setShowNewFolder(false); setShowNewFile(false); setNewItemName(""); }} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {feedback && (
+        <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
+          feedback.type === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"
+        )}>
+          {feedback.type === "success" ? <Check className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+          {feedback.text}
+        </div>
+      )}
+
+      <div className="grid grid-cols-5 gap-4 flex-1 min-h-0">
+        <div className="col-span-2 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            {listLoading ? (
+              <div className="p-4 space-y-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-8 bg-secondary rounded animate-pulse" />)}</div>
+            ) : fileList?.entries.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-sm">Empty directory</div>
+            ) : (
+              fileList?.entries.map(entry => (
+                <div
+                  key={entry.path}
+                  onClick={() => {
+                    if (renaming?.path === entry.path) return;
+                    if (entry.isDir) { setCurrentPath(entry.path); setSelectedFile(null); }
+                    else if (!isBinary(entry.name)) openFile(entry.path);
+                  }}
+                  onContextMenu={e => handleContextMenu(e, entry)}
+                  className={cn("flex items-center gap-2 px-3 py-2 hover:bg-secondary cursor-pointer transition-colors text-sm group",
+                    selectedFile?.path === entry.path && "bg-primary/10 text-primary",
+                    clipboard?.path === entry.path && clipboard.mode === "cut" && "opacity-50"
+                  )}
+                >
+                  {getFileIcon(entry.name, entry.isDir)}
+                  {renaming?.path === entry.path ? (
+                    <input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") { e.stopPropagation(); handleRenameCommit(); }
+                        if (e.key === "Escape") { e.stopPropagation(); setRenaming(null); }
+                      }}
+                      onBlur={handleRenameCommit}
+                      onClick={e => e.stopPropagation()}
+                      className="flex-1 bg-background border border-primary rounded px-1 py-0.5 text-xs focus:outline-none"
+                    />
+                  ) : (
+                    <span className="flex-1 truncate">{entry.name}</span>
+                  )}
+                  {!entry.isDir && !isBinary(entry.name) && !renaming && (
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">{entry.size > 1024 ? `${(entry.size / 1024).toFixed(1)}KB` : `${entry.size}B`}</span>
+                  )}
+                  {isBinary(entry.name) && !renaming && <span className="text-xs text-muted-foreground italic">binary</span>}
+                  {!renaming && (
+                    <button
+                      onClick={e => { e.stopPropagation(); handleContextMenu(e, entry); }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-primary transition-all rounded"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))
             )}
-            {breadcrumbs.map((seg, i) => (
-              <span key={i} className="flex items-center gap-1">
-                {i > 0 && <ChevronRight className="w-3 h-3" />}
-                <span className={i === breadcrumbs.length - 1 ? "text-foreground font-medium" : ""}>{seg || "/"}</span>
-              </span>
-            ))}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {listLoading ? (
-            <div className="p-4 space-y-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-8 bg-secondary rounded animate-pulse" />)}</div>
-          ) : fileList?.entries.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">Empty directory</div>
-          ) : (
-            fileList?.entries.map(entry => (
-              <div
-                key={entry.path}
-                onClick={() => {
-                  if (entry.isDir) { setCurrentPath(entry.path); setSelectedFile(null); }
-                  else if (!isBinary(entry.name)) openFile(entry.path);
-                }}
-                className={cn("flex items-center gap-2 px-3 py-2 hover:bg-secondary cursor-pointer transition-colors text-sm group",
-                  selectedFile?.path === entry.path && "bg-primary/10 text-primary"
-                )}
-              >
-                {getFileIcon(entry.name, entry.isDir)}
-                <span className="flex-1 truncate">{entry.name}</span>
-                {!entry.isDir && !isBinary(entry.name) && (
-                  <span className="text-xs text-muted-foreground">{entry.size > 1024 ? `${(entry.size / 1024).toFixed(1)}KB` : `${entry.size}B`}</span>
-                )}
-                {isBinary(entry.name) && <span className="text-xs text-muted-foreground italic">binary</span>}
-                {!entry.isDir && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${entry.name}?`)) deleteFile({ id: serverId, params: { path: entry.path } }); }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
+
+        <div className="col-span-3 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
+          {!selectedFile ? (
+            <div className="flex-1 flex items-center justify-center text-center p-8">
+              <div>
+                <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">Select a file to view and edit its contents</p>
+                <p className="text-muted-foreground text-xs mt-1">Right-click any file or folder for more options</p>
               </div>
-            ))
+            </div>
+          ) : (
+            <>
+              <div className="p-3 border-b border-border flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {getFileIcon(selectedFile.path.split("/").pop()!, false)}
+                  <span className="text-sm font-medium truncate">{selectedFile.path.split("/").pop()}</span>
+                  {isDirty && <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" title="Unsaved changes" />}
+                </div>
+                <button
+                  onClick={handleSave}
+                  disabled={!isDirty || saveStatus === "saving"}
+                  className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex-shrink-0",
+                    saveStatus === "saved" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
+                      saveStatus === "error" ? "bg-destructive/20 text-destructive border border-destructive/30" :
+                        isDirty ? "bg-primary text-primary-foreground hover:bg-primary/90" :
+                          "bg-secondary text-muted-foreground cursor-not-allowed"
+                  )}
+                >
+                  {saveStatus === "saving" ? <><RefreshCw className="w-3 h-3 animate-spin" /> Saving...</> :
+                    saveStatus === "saved" ? <><Check className="w-3 h-3" /> Saved!</> :
+                      saveStatus === "error" ? <><X className="w-3 h-3" /> Error</> :
+                        <><Save className="w-3 h-3" /> Save</>}
+                </button>
+              </div>
+              {contentLoading ? (
+                <div className="flex-1 flex items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+              ) : (
+                <textarea
+                  value={editorContent}
+                  onChange={e => { setEditorContent(e.target.value); setIsDirty(true); setSaveStatus("idle"); }}
+                  onKeyDown={e => { if (e.ctrlKey && e.key === 's') { e.preventDefault(); handleSave(); } }}
+                  spellCheck={false}
+                  className="flex-1 bg-transparent p-4 font-mono text-xs resize-none focus:outline-none text-foreground leading-relaxed"
+                  placeholder="File contents..."
+                />
+              )}
+            </>
           )}
         </div>
       </div>
 
-      <div className="col-span-3 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
-        {!selectedFile ? (
-          <div className="flex-1 flex items-center justify-center text-center p-8">
-            <div>
-              <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">Select a file to view and edit its contents</p>
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-card border border-border rounded-xl shadow-2xl py-1 min-w-[180px]"
+          style={{ left: Math.min(contextMenu.x, window.innerWidth - 200), top: Math.min(contextMenu.y, window.innerHeight - 300) }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-3 py-2 border-b border-border">
+            <div className="flex items-center gap-2">
+              {getFileIcon(contextMenu.entry.name, contextMenu.entry.isDir)}
+              <span className="text-xs font-medium truncate max-w-[140px]">{contextMenu.entry.name}</span>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="p-3 border-b border-border flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                {getFileIcon(selectedFile.path.split("/").pop()!, false)}
-                <span className="text-sm font-medium truncate">{selectedFile.path.split("/").pop()}</span>
-                {isDirty && <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" title="Unsaved changes" />}
-              </div>
-              <button
-                onClick={handleSave}
-                disabled={!isDirty || saveStatus === "saving"}
-                className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex-shrink-0",
-                  saveStatus === "saved" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-                    saveStatus === "error" ? "bg-destructive/20 text-destructive border border-destructive/30" :
-                      isDirty ? "bg-primary text-primary-foreground hover:bg-primary/90" :
-                        "bg-secondary text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                {saveStatus === "saving" ? <><RefreshCw className="w-3 h-3 animate-spin" /> Saving...</> :
-                  saveStatus === "saved" ? <><Check className="w-3 h-3" /> Saved!</> :
-                    saveStatus === "error" ? <><X className="w-3 h-3" /> Error</> :
-                      <><Save className="w-3 h-3" /> Save</>}
-              </button>
-            </div>
-            {contentLoading ? (
-              <div className="flex-1 flex items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
-            ) : (
-              <textarea
-                value={editorContent}
-                onChange={e => { setEditorContent(e.target.value); setIsDirty(true); setSaveStatus("idle"); }}
-                onKeyDown={e => { if (e.ctrlKey && e.key === 's') { e.preventDefault(); handleSave(); } }}
-                spellCheck={false}
-                className="flex-1 bg-transparent p-4 font-mono text-xs resize-none focus:outline-none text-foreground leading-relaxed"
-                placeholder="File contents..."
-              />
-            )}
-          </>
+          {((): ContextMenuItem[] => {
+            const entry = contextMenu.entry;
+            const pasteTargetDir = entry.isDir ? entry.path : currentPath;
+            const items: ContextMenuItem[] = [
+              { icon: <Pencil className="w-3.5 h-3.5" />, label: "Rename", action: () => handleRenameStart(entry) },
+              { icon: <Scissors className="w-3.5 h-3.5" />, label: "Cut", action: () => handleCut(entry) },
+              { icon: <Copy className="w-3.5 h-3.5" />, label: "Copy", action: () => handleCopy(entry) },
+              ...(clipboard
+                ? [{ icon: <ClipboardPaste className="w-3.5 h-3.5" />, label: "Paste here", action: () => { setContextMenu(null); handlePaste(pasteTargetDir); } } as ContextMenuItem]
+                : []),
+              { icon: <Move className="w-3.5 h-3.5" />, label: "Move to…", action: () => handleMoveOpen(entry) },
+              { separator: true as const },
+              {
+                icon: <Archive className="w-3.5 h-3.5" />,
+                label: entry.isDir ? "Compress folder" : "Compress to .zip",
+                action: () => handleCompress(entry),
+              },
+              {
+                icon: <PackageOpen className="w-3.5 h-3.5" />,
+                label: "Extract here",
+                action: () => handleExtract(entry),
+                disabled: entry.isDir || !isZip(entry.name),
+              } as ContextMenuItem,
+              { separator: true as const },
+              { icon: <Trash2 className="w-3.5 h-3.5 text-destructive" />, label: "Delete", action: () => handleDelete(entry), danger: true },
+            ];
+            return items;
+          })().map((item, i) => item.separator ? (
+            <div key={i} className="my-1 border-t border-border" />
+          ) : (
+            <button
+              key={i}
+              onClick={item.disabled ? undefined : item.action}
+              disabled={item.disabled}
+              className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors text-left",
+                item.disabled
+                  ? "text-muted-foreground cursor-not-allowed opacity-50"
+                  : item.danger
+                    ? "text-destructive hover:bg-destructive/10"
+                    : "text-foreground hover:bg-secondary"
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showMoveDialog && (
+        <MoveDialog
+          serverId={serverId}
+          entry={showMoveDialog.entry}
+          destination={moveDestination}
+          onDestinationChange={setMoveDestination}
+          onConfirm={handleMoveConfirm}
+          onClose={() => setShowMoveDialog(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+type DirTreeNode = { path: string; name: string; isDir: boolean };
+
+function DirTreeRow({
+  serverId, node, depth, selected, excludePath, onSelect,
+}: {
+  serverId: string; node: DirTreeNode; depth: number; selected: string; excludePath: string; onSelect: (path: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isExcluded = excludePath !== "" && (node.path === excludePath || node.path.startsWith(excludePath.endsWith("/") ? excludePath : excludePath + "/"));
+
+  const { data: childData } = useListServerFiles(serverId, { path: node.path }, { query: { enabled: expanded } });
+  const children = (childData?.entries ?? []).filter(e => e.isDir);
+
+  if (isExcluded) return null;
+
+  return (
+    <>
+      <div
+        className={cn("flex items-center gap-1.5 px-2 py-1.5 rounded cursor-pointer select-none text-sm",
+          selected === node.path ? "bg-primary/20 text-primary" : "hover:bg-secondary"
         )}
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        onClick={() => onSelect(node.path)}
+      >
+        <button
+          className="w-3.5 h-3.5 flex items-center justify-center shrink-0 opacity-70"
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+        >
+          <ChevronRight className={cn("w-3 h-3 transition-transform", expanded && "rotate-90")} />
+        </button>
+        <FolderOpen className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+        <span className="truncate">{node.name}</span>
+      </div>
+      {expanded && children.map(child => (
+        <DirTreeRow key={child.path} serverId={serverId} node={{ path: child.path, name: child.name, isDir: true }} depth={depth + 1} selected={selected} excludePath={excludePath} onSelect={onSelect} />
+      ))}
+    </>
+  );
+}
+
+function MoveDialog({
+  serverId, entry, destination, onDestinationChange, onConfirm, onClose,
+}: {
+  serverId: string; entry: FileEntry; destination: string; onDestinationChange: (v: string) => void; onConfirm: () => void; onClose: () => void;
+}) {
+  const [selectedDir, setSelectedDir] = useState<string>("");
+  const { data: rootData } = useListServerFiles(serverId, { path: "/" }, { query: { enabled: true } });
+  const rootDirs = (rootData?.entries ?? []).filter(e => e.isDir);
+  const excludePath = entry.isDir ? entry.path : "";
+
+  function handleSelectDir(path: string) {
+    setSelectedDir(path);
+    const prefix = path === "/" ? "" : path;
+    onDestinationChange(prefix + "/" + entry.name);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <h3 className="font-semibold mb-1 flex items-center gap-2">
+          <Move className="w-4 h-4 text-primary" /> Move "{entry.name}"
+        </h3>
+        <p className="text-xs text-muted-foreground mb-3">Browse to a destination folder, or type a path manually</p>
+
+        <div className="border border-border rounded-lg overflow-auto max-h-48 mb-3 bg-background p-1">
+          <div
+            className={cn("flex items-center gap-1.5 px-2 py-1.5 rounded cursor-pointer text-sm",
+              selectedDir === "/" ? "bg-primary/20 text-primary" : "hover:bg-secondary"
+            )}
+            onClick={() => handleSelectDir("/")}
+          >
+            <span className="w-3.5 h-3.5 invisible shrink-0" />
+            <FolderOpen className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+            <span className="font-mono text-xs">/</span>
+            <span className="text-muted-foreground text-xs">(root)</span>
+          </div>
+          {rootDirs.map(node => (
+            <DirTreeRow
+              key={node.path}
+              serverId={serverId}
+              node={{ path: node.path, name: node.name, isDir: true }}
+              depth={0}
+              selected={selectedDir}
+              excludePath={excludePath}
+              onSelect={handleSelectDir}
+            />
+          ))}
+        </div>
+
+        <input
+          autoFocus
+          type="text"
+          value={destination}
+          onChange={e => { onDestinationChange(e.target.value); setSelectedDir(""); }}
+          onKeyDown={e => { if (e.key === "Enter") onConfirm(); if (e.key === "Escape") onClose(); }}
+          placeholder="/path/to/destination"
+          className="w-full bg-background border border-border rounded-lg py-2.5 px-4 text-sm font-mono focus:outline-none focus:border-primary transition-colors mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 bg-secondary rounded-lg text-sm">Cancel</button>
+          <button
+            onClick={onConfirm}
+            disabled={!destination || destination === entry.path}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-primary/90"
+          >
+            Move
+          </button>
+        </div>
       </div>
     </div>
   );

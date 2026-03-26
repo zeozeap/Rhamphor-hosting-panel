@@ -239,6 +239,30 @@ export interface FileWriteRequest {
   content: string;
 }
 
+export interface FilePathRequest {
+  path: string;
+}
+
+export interface FileRenameRequest {
+  path: string;
+  newName: string;
+}
+
+export interface FileTransferRequest {
+  source: string;
+  destination: string;
+}
+
+export interface FileCompressRequest {
+  path: string;
+  destination?: string;
+}
+
+export interface FileExtractRequest {
+  path: string;
+  destination?: string;
+}
+
 export interface ServerPlugin {
   id: string;
   serverId: string;

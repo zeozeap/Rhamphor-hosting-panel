@@ -563,6 +563,186 @@ paths:
               schema:
                 $ref: "#/components/schemas/FileEntry"
 
+  /servers/{id}/files/touch:
+    post:
+      operationId: createServerFile
+      tags: [servers]
+      summary: Create a new empty file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FilePathRequest"
+      responses:
+        "200":
+          description: File created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+
+  /servers/{id}/files/rename:
+    post:
+      operationId: renameServerFile
+      tags: [servers]
+      summary: Rename a file or folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileRenameRequest"
+      responses:
+        "200":
+          description: Renamed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /servers/{id}/files/move:
+    post:
+      operationId: moveServerFile
+      tags: [servers]
+      summary: Move a file or folder to a new path
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileTransferRequest"
+      responses:
+        "200":
+          description: Moved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+        "404":
+          description: Source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /servers/{id}/files/copy:
+    post:
+      operationId: copyServerFile
+      tags: [servers]
+      summary: Copy a file or folder to a new path
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileTransferRequest"
+      responses:
+        "200":
+          description: Copied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+        "404":
+          description: Source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /servers/{id}/files/compress:
+    post:
+      operationId: compressServerFile
+      tags: [servers]
+      summary: Compress a file or folder into a zip archive
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileCompressRequest"
+      responses:
+        "200":
+          description: Compressed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+        "404":
+          description: Source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /servers/{id}/files/extract:
+    post:
+      operationId: extractServerFile
+      tags: [servers]
+      summary: Extract a zip file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileExtractRequest"
+      responses:
+        "200":
+          description: Extracted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileEntry"
+        "404":
+          description: Zip not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /servers/{id}/plugins:
     get:
       operationId: listServerPlugins
@@ -1124,6 +1304,56 @@ components:
           type: string
       required:
         - content
+
+    FilePathRequest:
+      type: object
+      properties:
+        path:
+          type: string
+      required:
+        - path
+
+    FileRenameRequest:
+      type: object
+      properties:
+        path:
+          type: string
+        newName:
+          type: string
+      required:
+        - path
+        - newName
+
+    FileTransferRequest:
+      type: object
+      properties:
+        source:
+          type: string
+        destination:
+          type: string
+      required:
+        - source
+        - destination
+
+    FileCompressRequest:
+      type: object
+      properties:
+        path:
+          type: string
+        destination:
+          type: string
+      required:
+        - path
+
+    FileExtractRequest:
+      type: object
+      properties:
+        path:
+          type: string
+        destination:
+          type: string
+      required:
+        - path
 
     ServerPlugin:
       type: object

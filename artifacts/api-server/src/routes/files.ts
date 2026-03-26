@@ -50,7 +50,7 @@ router.put("/servers/:id/files/write", requireAuth, requireServerAccess, async (
   res.json({ path: filePath, size: entry.size, updatedAt: entry.updatedAt, message: "File saved successfully" });
 });
 
-router.delete("/servers/:id/files", async (req, res) => {
+router.delete("/servers/:id/files", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -65,7 +65,7 @@ router.delete("/servers/:id/files", async (req, res) => {
   res.json({ message: "File deleted successfully" });
 });
 
-router.post("/servers/:id/files/mkdir", async (req, res) => {
+router.post("/servers/:id/files/mkdir", requireAuth, requireServerAccess, async (req, res) => {
   const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
   if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
   const server = servers[0];
@@ -76,6 +76,113 @@ router.post("/servers/:id/files/mkdir", async (req, res) => {
 
   const entry = serverManager.createDirectory(server.id, dirPath);
   res.json(entry);
+});
+
+router.post("/servers/:id/files/touch", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { path: filePath } = req.body;
+  if (!filePath) { res.status(400).json({ error: "path required" }); return; }
+
+  const result = serverManager.createFile(server.id, filePath);
+  if (result === "exists") { res.status(409).json({ error: "A file already exists at that path" }); return; }
+  res.json(result);
+});
+
+router.post("/servers/:id/files/rename", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { path: oldPath, newName } = req.body;
+  if (!oldPath || !newName) { res.status(400).json({ error: "path and newName required" }); return; }
+
+  const result = serverManager.renameFilePath(server.id, oldPath, newName);
+  if (result === null) { res.status(404).json({ error: "File not found" }); return; }
+  if (result === "exists") { res.status(409).json({ error: "A file or folder with that name already exists" }); return; }
+
+  res.json(result);
+});
+
+router.post("/servers/:id/files/move", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { source, destination } = req.body;
+  if (!source || !destination) { res.status(400).json({ error: "source and destination required" }); return; }
+
+  const result = serverManager.moveFilePath(server.id, source, destination);
+  if (result === null) { res.status(404).json({ error: "Source file not found" }); return; }
+  if (result === "same") { res.status(400).json({ error: "Source and destination are the same" }); return; }
+  if (result === "subtree") { res.status(400).json({ error: "Cannot move a directory into itself" }); return; }
+  if (result === "exists") { res.status(409).json({ error: "A file or folder already exists at the destination" }); return; }
+
+  res.json(result);
+});
+
+router.post("/servers/:id/files/copy", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { source, destination } = req.body;
+  if (!source || !destination) { res.status(400).json({ error: "source and destination required" }); return; }
+
+  const result = serverManager.copyFilePath(server.id, source, destination);
+  if (result === null) { res.status(404).json({ error: "Source file not found" }); return; }
+  if (result === "same") { res.status(400).json({ error: "Source and destination are the same" }); return; }
+  if (result === "subtree") { res.status(400).json({ error: "Cannot copy a directory into itself" }); return; }
+  if (result === "exists") { res.status(409).json({ error: "A file or folder already exists at the destination" }); return; }
+
+  res.json(result);
+});
+
+router.post("/servers/:id/files/compress", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { path: sourcePath, destination } = req.body;
+  if (!sourcePath) { res.status(400).json({ error: "path required" }); return; }
+
+  const parentDir = sourcePath.substring(0, sourcePath.lastIndexOf("/")) || "/";
+  const baseName = sourcePath.split("/").filter(Boolean).pop() ?? "archive";
+  const destZipPath = destination || (parentDir === "/" ? `/${baseName}.zip` : `${parentDir}/${baseName}.zip`);
+
+  const result = serverManager.compressPath(server.id, sourcePath, destZipPath);
+  if (result === null) { res.status(404).json({ error: "Source not found" }); return; }
+  if (result === "exists") { res.status(409).json({ error: "A file already exists at the destination" }); return; }
+
+  res.json(result);
+});
+
+router.post("/servers/:id/files/extract", requireAuth, requireServerAccess, async (req, res) => {
+  const servers = await db.select().from(serversTable).where(eq(serversTable.id, req.params.id)).limit(1);
+  if (!servers.length) { res.status(404).json({ error: "Server not found" }); return; }
+  const server = servers[0];
+  serverManager.initFileSystem(server.id, server.serverType);
+
+  const { path: zipPath, destination } = req.body;
+  if (!zipPath) { res.status(400).json({ error: "path required" }); return; }
+  if (!/\.zip$/i.test(zipPath)) { res.status(400).json({ error: "Only .zip files can be extracted" }); return; }
+
+  const parentDir = zipPath.substring(0, zipPath.lastIndexOf("/")) || "/";
+  const baseName = zipPath.split("/").filter(Boolean).pop()?.replace(/\.zip$/i, "") ?? "extracted";
+  const destDirPath = destination || (parentDir === "/" ? `/${baseName}` : `${parentDir}/${baseName}`);
+
+  const result = serverManager.extractZip(server.id, zipPath, destDirPath);
+  if (result === null) { res.status(404).json({ error: "Zip file not found" }); return; }
+  if (result === "exists") { res.status(409).json({ error: "A folder already exists at the destination" }); return; }
+
+  res.json(result);
 });
 
 export default router;
